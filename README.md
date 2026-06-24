@@ -1,5 +1,8 @@
 # C.H.R.I.S. - Cognitive Humanoid Reasoning Interactive System
 
+"La inteligencia no consiste en almacenar símbolos, sino en interpretarlos dentro de una red coherente de significados." - Rapaport, quizá.
+"Propongo considerar la siguiente pregunta: '¿Pueden pensar las máquinas?'" - A. Turing
+"Se suele decir que las máquinas solo pueden hacer lo que les mandamos hacer. [...] La respuesta corta es que las máquinas a menudo nos sorprenden." - A. Turing
 ## Descripción breve
 C.H.R.I.S. (también llamado Chris, Christopher o Kurisu) es un proyecto de IA VTuber, cuyo objetivo es crear un streamer virtual interactivo y autónomo.
 
@@ -17,7 +20,7 @@ Identidad
 
 ¿Qué es la Identidad? Es un conjunto de elementos, algunos dinámicos y otros innalterables, que le dan "vida" a la máquina para su toma de decisiones. En este enfoque, el uso de cualquier modelo de lenguaje es indiferente, ya que en Chris importa más cómo se maneja la memoria y cómo esta interactúa con su identidad para dar una respuesta que puede variar en función del "estado de la máquina" en ese preciso momento. Definamos qué con esas otras carecterísticas:
 
-1. Personalidad: "¿Cómo suelo comportarme?"
+## 1. Personalidad: "¿Cómo suelo comportarme?"
 Son patrones relativamente estables.
 
 Ejemplo:
@@ -42,7 +45,7 @@ Agente extrovertido:
 - Habla con reclutadores
 - Hace networking
 
-2. Valores: "¿Qué considero importante?"
+## 2. Valores: "¿Qué considero importante?"
 Son más profundos que la personalidad (y por ende, más difíciles de modificar).
 
 Ejemplos:
@@ -62,7 +65,7 @@ Un agente cuyo valor principal sea honestidad podría decidir: No mentir.
 Aunque eso perjudique sus intereses o sus objetivos. En humanos ocurre constantemente (para bien y para mal). No se toma una decisión solo por utilidad, también por principios.
 
 
-3. Creencias: "¿Qué pienso que es verdad?"
+## 3. Creencias: "¿Qué pienso que es verdad?"
 Las creencias pueden ser correctas o incorrectas. Son afirmaciones concretas sobre algo o alguien.
 
 Ejemplo:
@@ -78,7 +81,7 @@ Evento: "Juan no respondió un mensaje."
 
 La observación (el hecho) es igual. La interpretación cambia.
 
-4. Objetivos: "¿Qué quiero lograr?"
+## 4. Objetivos: "¿Qué quiero lograr?"
 Son el motor del comportamiento.
 
 Ejemplo:
@@ -108,7 +111,7 @@ Acción actual
 
 Puede existir más de un objetivo. Estos objetivos pueden irse creando con el tiempo (o eliminándose), pero siempre debe de haber un objetivo (mínimo).
 
-5. Relaciones: "¿Qué significan las otras personas para mí?"
+## 5. Relaciones: "¿Qué significan las otras personas para mí?"
 
 No basta con recordar nombres o identificar con quién se habla. Hay que modelar vínculos.
 
@@ -130,7 +133,24 @@ Esto afecta decisiones. Si ambos pidedn ayuda:
 
 El agente probablemente ayude primero a María.
 
-7. Autoimagen: "¿Quién creo que soy?"
+## 6. Memoria autobiográfica: "¿Qué me ha pasado?"
+
+Es la historia personal del agente.
+
+Ejemplo:
+- Me gradué.
+- Perdí mi empleo.
+- Conocí a Juan.
+
+Es algo distinto del conocimiento general.
+
+No es: París es la capital de Francia.
+
+Es: Yo viajé a París.
+
+La autobiografía es lo que da continuidad temporal a los hechos de la realidad. Sin ella, el agente "muere" y "renace" en cada conversación.
+
+## 7. Autoimagen: "¿Quién creo que soy?"
 No necesariamente coincide con la realidad (el hecho).
 
 Ejemplo:
@@ -153,7 +173,7 @@ Con el tiempo eso se convierte en:
 
 - "Soy científico."
 
-8. Estado emocional: "¿Cómo me siento ahora?"
+## 8. Estado emocional: "¿Cómo me siento ahora?"
 
 Se trata de un atibuto temporal, no estable. Puede cambiar varias veces en una misma sesión.
 
@@ -228,7 +248,7 @@ Mayor probabilidad de recordarlo
 
 Las emociones ayudan a decidir qué recuerdos son importantes y cuáles se descartan más fácilmente.
 
-9. Modelo del mundo: "¿Cómo funciona el mundo?"
+## 9. Modelo del mundo: "¿Cómo funciona el mundo?"
 
 Ejemplo:
 
