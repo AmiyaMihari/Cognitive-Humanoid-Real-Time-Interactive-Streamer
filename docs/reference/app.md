@@ -2,14 +2,17 @@
 
 Source: [`app.py`](../../app.py)
 
-A minimal, ChatGPT-style demo wiring together the `sense_ear` and `mind` modules.
-Two inputs only: **type** a message, or tap the **microphone** and speak. Spoken
-audio is transcribed by `senses.sense_ear`, the resulting text is sent to `mind`,
-and `mind`'s reply appears in the chat. The full path is **audio → text → reply**.
+A minimal, ChatGPT-style demo wiring together the `sense_ear`, `mind` and
+`effector_voice` modules. Two inputs only: **type** a message, or tap the
+**microphone** and speak. Spoken audio is transcribed by `senses.sense_ear`, the
+resulting text is sent to `mind`, its reply appears in the chat **and is spoken
+aloud** by `effectors.effector_voice`. The full path is
+**audio → text → reply → speech**.
 
-The app is intentionally thin: it contains **no speech or LLM logic**. All
-transcription happens inside `sense_ear` and all thinking inside `mind`, so the
-UI never imports Whisper or OpenAI directly.
+The app is intentionally thin: it contains **no speech, LLM or TTS logic**. All
+transcription happens inside `sense_ear`, all thinking inside `mind`, and all
+speech synthesis inside `effector_voice`, so the UI never imports Whisper,
+OpenAI or Kokoro directly.
 
 ## Run it
 
@@ -21,27 +24,33 @@ streamlit run app.py
 
 | Element | Behaviour |
 | --- | --- |
-| **Model load** | `load_transcriber()` builds the transcriber once and keeps it warm across reruns/sessions via `@st.cache_resource`. The first run downloads `large-v3` (~3 GB) and caches it. |
+| **Model load** | `load_transcriber()` and `load_voice()` build the speech and TTS models once and keep them warm across reruns/sessions via `@st.cache_resource`. The first run downloads `large-v3` (~3 GB) and the Kokoro voice (~340 MB) and caches them. |
 | **Layout** | A single minimal screen: the conversation thread, then one input row — `st.chat_input` and the mic icon placed side by side via `st.columns([12, 1])`, ChatGPT-style. No title, sidebar, or saved chats. |
 | **Chat history** | Stored in `st.session_state.messages` and re-rendered with `st.chat_message`. This is the current session only — nothing is persisted. |
 | **🎙️ Microphone** | `streamlit_mic_recorder.mic_recorder` records in the browser and returns a **WAV** clip when you stop. The bytes are passed to `transcriber.transcribe(...)` to get text. |
 | **Text box** | `st.chat_input` captures typed messages directly. |
 | **Reply** | Whether the text came from the mic or the keyboard, it is sent to [`mind.think(...)`](mind/README.md), and the returned reply is appended to the chat as the assistant. |
+| **🔊 Voice** | Every reply is also synthesized with [`effector_voice.speak(...)`](effectors/effector_voice/README.md). The newest reply **autoplays once**; each assistant message keeps an `st.audio` player so it can be replayed. TTS is best-effort: if it fails, the text reply still stands. |
 
-> The demo is a working end-to-end loop: hear/read → think → reply. The speech
-> and thinking logic both live in their modules; this file only orchestrates.
+> The demo is a working end-to-end loop: hear/read → think → reply → speak. The
+> speech, thinking and TTS logic all live in their modules; this file only
+> orchestrates.
 
 ## Dependencies used here
 
 - [`senses.sense_ear`](senses/sense_ear/README.md) — the transcription module.
 - [`mind`](mind/README.md) — the thinking module (text → reply).
+- [`effectors.effector_voice`](effectors/effector_voice/README.md) — the text-to-speech module (text → audio file).
 - `streamlit` — the web UI framework.
 - `streamlit-mic-recorder` — in-browser microphone capture (returns WAV bytes).
 
 ## Customizing
 
-Because all speech and thinking logic is in the modules, you can change the UI
-freely. To change transcription behaviour (model, language, device), build a
+Because all speech, thinking and TTS logic is in the modules, you can change the
+UI freely. To change transcription behaviour (model, language, device), build a
 custom `Transcriber` — see [transcriber.md](senses/sense_ear/transcriber.md). To
 change the reply behaviour (a different model), build a custom `Mind` — see
-[mind/agent.md](mind/agent.md) — and use it instead of the shared singletons.
+[mind/agent.md](mind/agent.md). To change the spoken voice (a different voice,
+language or speed), build a custom `Voice` — see
+[effectors/effector_voice/synthesizer.md](effectors/effector_voice/synthesizer.md)
+— and use it instead of the shared singletons.

@@ -14,6 +14,7 @@ from streamlit_mic_recorder import mic_recorder
 
 from mind import think
 from senses.sense_ear import get_transcriber
+from effectors.effector_voice import get_voice, speak
 
 st.set_page_config(page_title="C.H.R.I.S.", page_icon="🎙️")
 
@@ -26,6 +27,14 @@ def load_transcriber():
     # Streamlit's "magic" doesn't render the WhisperModel object to the page.
     _ = transcriber.model
     return transcriber
+
+
+@st.cache_resource(show_spinner="Loading the voice model (first run only)...")
+def load_voice():
+    """Build the TTS voice once and keep it warm across reruns/sessions."""
+    voice = get_voice()
+    _ = voice.engine  # force the (slow) model load to happen here
+    return voice
 
 
 # CSS that pins the input row to the bottom of the screen (ChatGPT-style) and
@@ -51,22 +60,43 @@ _PINNED_INPUT_CSS = """
 
 def main() -> None:
     transcriber = load_transcriber()
+    load_voice()  # warm the TTS model so the first reply speaks without delay
     st.markdown(_PINNED_INPUT_CSS, unsafe_allow_html=True)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
     # Render the conversation so far (this session only; nothing is saved).
-    for message in st.session_state.messages:
+    # Assistant messages also carry a voice clip: the newest one autoplays once;
+    # older ones keep a player so they can be replayed on demand.
+    last_index = len(st.session_state.messages) - 1
+    for index, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            audio_path = message.get("audio")
+            if audio_path:
+                autoplay = index == last_index and st.session_state.get("play_latest", False)
+                st.audio(audio_path, format="audio/wav", autoplay=autoplay)
+    # The newest reply has now been (auto)played; don't replay it on the next rerun.
+    st.session_state.play_latest = False
 
     def reply_to(user_text: str) -> None:
-        """Store the user's words, ask `mind` for a reply, store that too."""
+        """Store the user's words, ask `mind` for a reply, then speak it."""
         st.session_state.messages.append({"role": "user", "content": user_text})
         with st.spinner("Thinking..."):
             answer = think(user_text)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+        # Always voice the reply. TTS is best-effort: if it fails, the text reply
+        # still stands rather than breaking the chat.
+        audio_path = None
+        try:
+            with st.spinner("Speaking..."):
+                audio_path = str(speak(answer))
+        except Exception:
+            audio_path = None
+        st.session_state.messages.append(
+            {"role": "assistant", "content": answer, "audio": audio_path}
+        )
+        st.session_state.play_latest = True
         st.rerun()
 
     # Input row: a text box with the mic icon to its right (ChatGPT-style),

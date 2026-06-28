@@ -30,6 +30,11 @@ repo, you can find its page in the same place under `reference/`:
 ```
 project                         docs/reference
 ├── app.py            ───────►  ├── app.md
+├── effectors/        ───────►  ├── effectors/
+│   └── effector_voice/ ─────►  │   └── effector_voice/
+│       ├── __init__.py ─────►  │       ├── README.md   (public API)
+│       ├── synthesizer.py ──►  │       ├── synthesizer.md
+│       └── _models.py  ─────►  │       └── models.md
 ├── mind/             ───────►  ├── mind/
 │   ├── __init__.py ─────────►  │   ├── README.md   (public API)
 │   └── agent.py    ─────────►  │   └── agent.md
@@ -49,6 +54,9 @@ project                         docs/reference
   how to call it and what it returns.
 - **Just need the thinking module?** Jump to
   [reference/mind/](reference/mind/README.md) — send it text, get a reply.
+- **Just need the voice module?** Jump to
+  [reference/effectors/effector_voice/](reference/effectors/effector_voice/README.md)
+  — send it text, get a spoken audio file.
 
 ## Documentation conventions
 

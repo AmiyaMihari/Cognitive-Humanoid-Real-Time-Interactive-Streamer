@@ -6,6 +6,12 @@ layout** — every page corresponds to a file or package in the repo.
 ```
 reference/
 ├── app.md                       ← app.py
+├── effectors/
+│   ├── README.md                ← effectors/ package
+│   └── effector_voice/
+│       ├── README.md            ← effectors/effector_voice/__init__.py  (PUBLIC API)
+│       ├── synthesizer.md       ← effectors/effector_voice/synthesizer.py
+│       └── models.md            ← effectors/effector_voice/_models.py
 ├── mind/
 │   ├── README.md                ← mind/__init__.py  (PUBLIC API)
 │   └── agent.md                 ← mind/agent.py
@@ -20,6 +26,13 @@ reference/
 ## Pages
 
 - [app.md](app.md) — the Streamlit demo application.
+- [effectors/](effectors/README.md) — the action package.
+  - [effectors/effector_voice/](effectors/effector_voice/README.md) — **the
+    text-to-speech module**: send it text, get back a spoken audio file.
+  - [effectors/effector_voice/synthesizer.md](effectors/effector_voice/synthesizer.md)
+    — the `Voice` class in detail.
+  - [effectors/effector_voice/models.md](effectors/effector_voice/models.md) —
+    internal Kokoro model-file caching.
 - [mind/](mind/README.md) — **the thinking module**: send it text, get a reply.
   - [mind/agent.md](mind/agent.md) — the `Mind` class and its LangGraph graph.
 - [senses/](senses/README.md) — the perception package.

@@ -68,26 +68,31 @@ streamlit run app.py
 Open the URL it prints. The screen is a minimal chat: a text box with a
 **🎙️ microphone** icon on its right. **Type** a message, or tap the mic, speak a
 short phrase, and tap **⏹️** to stop. Your words appear in the chat (transcribed
-by `sense_ear` when spoken), then `mind` replies. The full path is
-**audio → text → reply**. The first run downloads the `large-v3` model (~3 GB)
-and caches it; later runs start in seconds.
+by `sense_ear` when spoken), then `mind` replies and `effector_voice` **speaks the reply
+out loud** (with a player you can replay). The full path is
+**audio → text → reply → speech**. The first run downloads the `large-v3` model
+(~3 GB) and the Kokoro voice (~340 MB) and caches them; later runs start in
+seconds.
 
 ## 5. Use the modules from your own code
 
-The two engines are independent and each has a one-line contract:
+The engines are independent and each has a one-line contract:
 
 ```python
 from senses.sense_ear import transcribe   # audio in -> text out
 from mind import think                     # text in  -> reply out
+from effectors.effector_voice import speak  # text in  -> audio file out
 
-text  = transcribe(audio_bytes)
-reply = think(text)
-print(reply)
+text       = transcribe(audio_bytes)
+reply      = think(text)
+audio_path = speak(reply)
+print(reply, "->", audio_path)
 ```
 
 Full APIs (inputs, return values, options) are in
-[reference/senses/sense_ear/](reference/senses/sense_ear/README.md) and
-[reference/mind/](reference/mind/README.md).
+[reference/senses/sense_ear/](reference/senses/sense_ear/README.md),
+[reference/mind/](reference/mind/README.md) and
+[reference/effectors/effector_voice/](reference/effectors/effector_voice/README.md).
 
 ## Troubleshooting
 
