@@ -38,8 +38,15 @@ if (-not (Test-Path "venv")) {
     uv venv venv --python 3.12
 }
 
-# 4. Install all dependencies into the venv.
-Write-Host "==> Installing dependencies (first run can take a few minutes)..."
+# Safety: never install without the venv. Everything below targets the venv's
+# own interpreter explicitly, so nothing can ever leak into the system Python.
+if (-not (Test-Path "venv\Scripts\python.exe")) {
+    Write-Error "The virtualenv was not created (venv\Scripts\python.exe is missing). Aborting before installing anything."
+    exit 1
+}
+
+# 4. Install all dependencies into the venv (note: --python venv\Scripts\python.exe).
+Write-Host "==> Installing dependencies into the venv (first run can take a few minutes)..."
 uv pip install --python "venv\Scripts\python.exe" -r requirements.txt
 
 # 5. Create .env from the template if it doesn't exist yet.

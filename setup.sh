@@ -37,8 +37,16 @@ if [ ! -d venv ]; then
   uv venv venv --python 3.12
 fi
 
-# 4. Install all dependencies into the venv.
-echo "==> Installing dependencies (first run can take a few minutes)..."
+# Safety: never install without the venv. Everything below targets the venv's
+# own interpreter explicitly, so nothing can ever leak into the system Python.
+if [ ! -x venv/bin/python ]; then
+  echo "ERROR: the virtualenv was not created (venv/bin/python is missing)." >&2
+  echo "       Aborting before installing anything, to keep your system clean." >&2
+  exit 1
+fi
+
+# 4. Install all dependencies into the venv (note: --python venv/bin/python).
+echo "==> Installing dependencies into the venv (first run can take a few minutes)..."
 uv pip install --python venv/bin/python -r requirements.txt
 
 # 5. Create .env from the template if it doesn't exist yet.

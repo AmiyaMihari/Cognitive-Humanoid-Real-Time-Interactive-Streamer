@@ -30,12 +30,14 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-**Windows (PowerShell):**
-```powershell
-./setup.ps1
-```
-> Si Windows bloquea la ejecución del script, córrelo una vez así:
-> `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
+**Windows:**
+- La forma más fácil: **doble clic en `setup.bat`** (abre todo solo).
+- O desde PowerShell:
+  ```powershell
+  ./setup.ps1
+  ```
+  > Si Windows bloquea la ejecución del script, córrelo una vez así:
+  > `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
 
 El script instala `uv`, Python 3.12, crea el entorno virtual (`venv`), instala
 todas las dependencias y crea tu archivo `.env` a partir de la plantilla.
@@ -74,6 +76,37 @@ las siguientes arrancan en segundos.
 > En Linux con la shell **fish**, el script instala un hook que **activa el
 > entorno automáticamente** al entrar a la carpeta del proyecto, así que puedes
 > saltarte el paso de `source venv/bin/activate`.
+
+## Actualizar tras cambios (`git pull`)
+
+Las librerías **no se suben a GitHub** (el `venv/` está en `.gitignore`). Lo que
+viaja en el repo es **`requirements.txt`**: la lista de dependencias. Así que,
+cuando hagas `git pull` y alguien (o tú mismo desde otra máquina) haya añadido
+una librería nueva, vuelves a sincronizar tu venv con un comando:
+
+```bash
+git pull
+
+# La forma simple: volver a correr el script (es idempotente, solo instala lo nuevo)
+./setup.sh                 # en Windows: setup.bat  (o ./setup.ps1)
+
+# O directamente, si prefieres:
+uv pip install --python venv/bin/python -r requirements.txt   # venv\Scripts\python.exe en Windows
+```
+
+> Para un espejo **exacto** (que además desinstale lo que se haya quitado de
+> `requirements.txt`), usa `uv pip sync requirements.txt` en lugar de `install`.
+
+### Cuando TÚ añades una librería nueva
+
+Para que el cambio llegue a las otras máquinas, tiene que quedar en
+`requirements.txt`:
+
+```bash
+uv pip install --python venv/bin/python <libreria>   # 1. instálala en tu venv
+# 2. añade su línea (con versión) a requirements.txt
+git add requirements.txt && git commit -m "deps: add <libreria>" && git push
+```
 
 ## Instalación manual (alternativa)
 
