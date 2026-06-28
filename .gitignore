@@ -1,0 +1,19 @@
+# Python virtual environment
+venv/
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Secrets / local config
+.env
+
+# Whisper model cache (downloaded from Hugging Face)
+*.bin
+.cache/
+
+# Local transcripts / audio scratch
+transcripcion.txt
+*.wav
