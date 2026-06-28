@@ -34,19 +34,29 @@ source venv/bin/activate        # automatic in fish; explicit here for clarity
 uv pip install -r requirements.txt
 ```
 
-## 3. (Optional) Configure a Hugging Face token
+## 3. Configure your API keys
 
-The default Spanish `large-v3` weights are **public**, so this is **not
-required**. Set a token only to avoid anonymous download rate limits, or if you
-later switch to a gated model (e.g. pyannote diarization):
+Secrets live in a git-ignored `.env` file. Create it from the template:
 
 ```fish
 cp .env.example .env
-# then edit .env and set HF_TOKEN=hf_xxx
 ```
 
-The module loads `.env` automatically. `.env` is git-ignored, so the token never
-reaches the repository. See
+Then edit `.env`:
+
+| Key | Required? | Used by | Notes |
+| --- | --- | --- | --- |
+| `OPENAI_API_KEY` | **Yes** | `mind` | The thinking module sends text to an OpenAI model; without it, replies fail. Get one at <https://platform.openai.com/api-keys>. |
+| `HF_TOKEN` | No | `sense_ear` | The Spanish `large-v3` weights are public. Set a token only to avoid anonymous download rate limits, or for a gated model. |
+
+```ini
+OPENAI_API_KEY=sk-...
+HF_TOKEN=          # leave empty unless you need it
+```
+
+Both modules load `.env` automatically on import. `.env` is git-ignored, so the
+keys never reach the repository. See
+[reference/mind/](reference/mind/README.md#secrets-handling) and
 [reference/senses/sense_ear/](reference/senses/sense_ear/README.md#secrets-handling).
 
 ## 4. Run the demo app
@@ -56,21 +66,27 @@ streamlit run app.py
 ```
 
 Open the URL it prints. You can **type** a message, or tap **🔴 Start
-recording**, speak a short phrase, and **⏹️ Stop** — the recognised text appears
-in the chat. The first run downloads the `large-v3` model (~3 GB) and caches it;
-later runs start in seconds.
+recording**, speak a short phrase, and **⏹️ Stop**. Your words appear in the chat
+(transcribed by `sense_ear` when spoken), then `mind` replies. The full path is
+**audio → text → reply**. The first run downloads the `large-v3` model (~3 GB)
+and caches it; later runs start in seconds.
 
-## 5. Use the module from your own code
+## 5. Use the modules from your own code
+
+The two engines are independent and each has a one-line contract:
 
 ```python
-from senses.sense_ear import transcribe
+from senses.sense_ear import transcribe   # audio in -> text out
+from mind import think                     # text in  -> reply out
 
-text = transcribe(audio_bytes)   # audio in -> text out
-print(text)
+text  = transcribe(audio_bytes)
+reply = think(text)
+print(reply)
 ```
 
-Full API (inputs, return value, options) is in
-[reference/senses/sense_ear/](reference/senses/sense_ear/README.md).
+Full APIs (inputs, return values, options) are in
+[reference/senses/sense_ear/](reference/senses/sense_ear/README.md) and
+[reference/mind/](reference/mind/README.md).
 
 ## Troubleshooting
 
@@ -80,3 +96,4 @@ Full API (inputs, return value, options) is in
 | First transcription is very slow | The `large-v3` model is downloading/loading. Subsequent calls reuse the cached, in-memory model. |
 | Runs on CPU instead of GPU | Check `nvidia-smi`. The module falls back to CPU if CUDA initialization fails; see `Transcriber.device`. |
 | Empty string returned | No speech was detected in the clip (silence/noise). That is the expected result. |
+| Reply errors / auth failure from `mind` | `OPENAI_API_KEY` is missing or invalid. Check your `.env` (step 3) and that the key is active. |

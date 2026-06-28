@@ -6,6 +6,9 @@ layout** — every page corresponds to a file or package in the repo.
 ```
 reference/
 ├── app.md                       ← app.py
+├── mind/
+│   ├── README.md                ← mind/__init__.py  (PUBLIC API)
+│   └── agent.md                 ← mind/agent.py
 └── senses/
     ├── README.md                ← senses/ package
     └── sense_ear/
@@ -17,6 +20,8 @@ reference/
 ## Pages
 
 - [app.md](app.md) — the Streamlit demo application.
+- [mind/](mind/README.md) — **the thinking module**: send it text, get a reply.
+  - [mind/agent.md](mind/agent.md) — the `Mind` class and its LangGraph graph.
 - [senses/](senses/README.md) — the perception package.
   - [senses/sense_ear/](senses/sense_ear/README.md) — **the speech-to-text
     module**: how to call it and what it returns. Start here if you just want to

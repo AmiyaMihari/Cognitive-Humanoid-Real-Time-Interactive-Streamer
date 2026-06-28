@@ -13,6 +13,7 @@ from __future__ import annotations
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 
+from mind import think
 from senses.sense_ear import get_transcriber
 
 st.set_page_config(page_title="sense_ear", page_icon="🎙️")
@@ -40,6 +41,14 @@ def main() -> None:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    def reply_to(user_text: str) -> None:
+        """Store the user's words, ask `mind` for a reply, store that too."""
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        with st.spinner("Thinking..."):
+            answer = think(user_text)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.rerun()
+
     # --- Microphone input -------------------------------------------------
     # Records in the browser and returns the clip when the user stops.
     audio = mic_recorder(
@@ -53,15 +62,13 @@ def main() -> None:
     if audio and audio.get("bytes"):
         with st.spinner("Transcribing..."):
             text = transcriber.transcribe(audio["bytes"])
-        text = text or "_(no speech detected)_"
-        st.session_state.messages.append({"role": "user", "content": text})
-        st.rerun()
+        if text:
+            reply_to(text)
 
     # --- Text input -------------------------------------------------------
     typed = st.chat_input("Write a message...")
     if typed:
-        st.session_state.messages.append({"role": "user", "content": typed})
-        st.rerun()
+        reply_to(typed)
 
 
 if __name__ == "__main__":

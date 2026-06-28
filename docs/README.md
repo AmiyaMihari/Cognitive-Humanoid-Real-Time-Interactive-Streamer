@@ -18,6 +18,9 @@ it is teaching, instructing, describing, or explaining:
 > **How-to guides** (task recipes like "transcribe a file from a script") are
 > kept short and live next to the relevant reference page.
 
+> **Writing docs yourself?** See [writing-documentation.md](writing-documentation.md)
+> for the conventions every page here follows.
+
 ## The reference mirrors the code
 
 The [`reference/`](reference/) tree is a 1:1 mirror of the project's source
@@ -27,6 +30,9 @@ repo, you can find its page in the same place under `reference/`:
 ```
 project                         docs/reference
 ├── app.py            ───────►  ├── app.md
+├── mind/             ───────►  ├── mind/
+│   ├── __init__.py ─────────►  │   ├── README.md   (public API)
+│   └── agent.py    ─────────►  │   └── agent.md
 └── senses/           ───────►  └── senses/
     └── sense_ear/    ───────►      └── sense_ear/
         ├── __init__.py ─────►          ├── README.md   (public API)
@@ -41,6 +47,8 @@ project                         docs/reference
 - **Just need to call the speech module?** Jump to
   [reference/senses/sense_ear/](reference/senses/sense_ear/README.md) — it covers
   how to call it and what it returns.
+- **Just need the thinking module?** Jump to
+  [reference/mind/](reference/mind/README.md) — send it text, get a reply.
 
 ## Documentation conventions
 

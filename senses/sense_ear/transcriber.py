@@ -66,7 +66,9 @@ class Transcriber:
                 self.model_size,
                 device=self._device,
                 compute_type=self._compute_type,
-                **({"token": token} if token else {}),
+                # faster-whisper's auth kwarg is `use_auth_token`; unknown kwargs
+                # are forwarded to ctranslate2.Whisper, which rejects them.
+                **({"use_auth_token": token} if token else {}),
             )
         except Exception:
             if self._device == "cuda" and self._cpu_fallback:
@@ -77,7 +79,7 @@ class Transcriber:
                     self.model_size,
                     device="cpu",
                     compute_type="int8",
-                    **({"token": token} if token else {}),
+                    **({"use_auth_token": token} if token else {}),
                 )
             raise
 

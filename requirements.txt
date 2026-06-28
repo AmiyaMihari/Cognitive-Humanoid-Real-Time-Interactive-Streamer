@@ -1,3 +1,7 @@
+# Requires Python 3.11 or 3.12 (we use 3.12, installed via `uv`).
+# Do NOT use the system's Python 3.14 -- it is too new for parts of the ML
+# stack (PyTorch/pyannote). The project venv is already pinned to CPython 3.12.
+#
 # --- Speech-to-text engine (sense_ear module) ---
 # faster-whisper runs Whisper through CTranslate2 (no PyTorch needed).
 faster-whisper==1.2.1
@@ -14,6 +18,11 @@ nvidia-cudnn-cu12==9.23.2.1
 # --- Secrets ---
 # Loads HF_TOKEN (and any other secret) from a git-ignored .env file.
 python-dotenv==1.2.1
+
+# --- Thinking engine (mind module) ---
+# A minimal LangGraph graph over an OpenAI chat model: text in -> reply out.
+langgraph==0.6.7
+langchain-openai==0.3.33
 
 # --- Demo UI ---
 streamlit==1.58.0

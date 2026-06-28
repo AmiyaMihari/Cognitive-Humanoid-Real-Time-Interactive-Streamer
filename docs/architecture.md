@@ -9,16 +9,28 @@ were made. For exact APIs, see [reference/](reference/).
                     ┌────────────────────────────┐
    microphone /     │            app.py          │   Streamlit UI:
    typed text   ──► │  (Streamlit chat frontend) │   text box + mic button
-                    └─────────────┬──────────────┘
-                                  │ audio bytes
-                                  ▼
-                    ┌────────────────────────────┐
-                    │   senses.sense_ear          │   "hearing" sense
-                    │   transcribe(audio) -> str  │   (isolated module)
-                    └─────────────┬──────────────┘
-                                  │
-              ┌───────────────────┴───────────────────┐
-              ▼                                        ▼
+                    └───┬────────────────────▲───┘
+                        │ audio bytes         │ reply text
+                        ▼                     │
+        ┌────────────────────────────┐         │
+        │   senses.sense_ear         │         │   "hearing" sense
+        │   transcribe(audio) → str  │         │   (isolated module)
+        └─────────────┬──────────────┘         │
+                      │ recognised text         │
+                      ▼                         │
+        ┌────────────────────────────┐          │
+        │   mind                     │ ─────────┘   "thinking" faculty
+        │   think(text) → str        │              (isolated module)
+        └────────────────────────────┘
+```
+
+The pipeline is **audio → text → reply**: `sense_ear` hears (audio → text),
+`mind` thinks (text → reply), and `app.py` only wires the two together and to the
+UI. Each module is expanded independently below.
+
+### Inside `sense_ear`
+
+```
    ┌─────────────────────┐                 ┌────────────────────────┐
    │  transcriber.py     │                 │   _cuda.py             │
    │  faster-whisper /   │  uses           │   preloads CUDA 12     │
@@ -26,24 +38,38 @@ were made. For exact APIs, see [reference/](reference/).
    └─────────────────────┘                 └────────────────────────┘
 ```
 
-The golden rule: **all speech logic lives inside `senses/sense_ear/`.** The app
-(or any other caller) only ever sees `audio in -> text out`. You can swap the UI,
-or call the module from a script, without touching the model code.
+### Inside `mind`
+
+```
+   ┌──────────────────────────────────────┐
+   │  agent.py: Mind                       │
+   │  minimal LangGraph graph (START →     │  uses
+   │  respond) over a ChatOpenAI model     │ ◄──── OPENAI_API_KEY (.env)
+   └──────────────────────────────────────┘
+```
+
+The golden rule: **each module hides its implementation behind a tiny
+contract.** `sense_ear` exposes only `audio in → text out`; `mind` exposes only
+`text in → reply out`. You can swap the UI, or call either module from a script,
+without touching the engine code.
 
 ## Project layout
 
 ```
 C.H.R.I.S./
-├── app.py                  # Streamlit demo (UI only; no Whisper code here)
+├── app.py                  # Streamlit demo (UI only; no engine code here)
 ├── senses/                 # perception modules, one sub-package per sense
 │   ├── __init__.py
 │   └── sense_ear/          # hearing: speech-to-text
 │       ├── __init__.py     # public API: transcribe(), get_transcriber(), Transcriber
 │       ├── transcriber.py  # the engine (faster-whisper wrapper)
 │       └── _cuda.py        # internal: CUDA 12 library preloading
+├── mind/                   # thinking: text-to-reply
+│   ├── __init__.py         # public API: think(), get_mind(), Mind
+│   └── agent.py            # the engine (LangGraph graph over ChatOpenAI)
 ├── requirements.txt        # pinned, tested dependency versions
-├── .env.example            # template for the optional HF_TOKEN secret
-├── txt_interviews.ipynb    # original notebook this module was derived from
+├── .env.example            # template for the HF_TOKEN and OPENAI_API_KEY secrets
+├── txt_interviews.ipynb    # original notebook sense_ear was derived from
 └── docs/                   # you are here
 ```
 
@@ -53,8 +79,27 @@ C.H.R.I.S./
 
 `sense_ear` exposes a tiny contract (`transcribe(audio) -> str`) and hides
 faster-whisper, CTranslate2, CUDA handling and model lifecycle behind it.
-Benefits: the UI stays trivial, the engine is unit-testable in isolation, and
-future senses (vision, etc.) slot in next to it under `senses/`.
+`mind` does the same with `think(text) -> str`, hiding the LLM client and graph.
+Benefits: the UI stays trivial, each engine is unit-testable in isolation, and
+new modules (future senses under `senses/`, or richer thinking in `mind/`) slot
+in without changing callers.
+
+### The mind module (thinking)
+
+`mind` is the counterpart to the senses: where a sense turns the world into
+text, `mind` turns text into a response. Its contract is deliberately identical
+in spirit — `think(text) -> str` — so `app.py` can pipe `sense_ear`'s output
+straight into it.
+
+Under the hood it is a **minimal LangGraph graph** (`START → respond`) over a
+`ChatOpenAI` model. A single OpenAI call would be shorter, but LangGraph was
+chosen on purpose: it gives the "thinking" layer a clear place to grow —
+conversation memory, tool use, multi-step reasoning — each added as graph nodes
+**behind the same `think(text) -> str` surface**, so callers never change. Today
+the graph is intentionally one node: the simplest thing that works.
+
+The default model is `gpt-4o-mini` (cheap and fast); construct `Mind(model=...)`
+for a different one.
 
 ### Tuned for short, real-time audio
 
@@ -93,10 +138,15 @@ interpreter and venv.
 
 ### Secrets via .env
 
-`HF_TOKEN` is optional (the `large-v3` weights are public). When present, it is
-read from a git-ignored `.env` file through `python-dotenv`, loaded
-automatically when the module is imported. Real environment variables always win
-over `.env` values.
+Both modules read secrets from a git-ignored `.env` file through
+`python-dotenv`, loaded automatically on import. Real environment variables
+always win over `.env` values.
+
+- `OPENAI_API_KEY` (used by `mind`) is **required** — the LLM client cannot
+  authenticate without it.
+- `HF_TOKEN` (used by `sense_ear`) is **optional** — the `large-v3` weights are
+  public; a token only lifts anonymous download rate limits or unlocks gated
+  models.
 
 ## Dependency overview
 
@@ -104,5 +154,6 @@ over `.env` values.
 | --- | --- |
 | `faster-whisper` + `ctranslate2` | Whisper inference engine (no PyTorch needed) |
 | `nvidia-cublas-cu12`, `nvidia-cudnn-cu12` | CUDA 12 libs with Blackwell support |
-| `python-dotenv` | Loads the `HF_TOKEN` secret from `.env` |
+| `langgraph` + `langchain-openai` | The `mind` thinking engine: a graph over an OpenAI chat model |
+| `python-dotenv` | Loads the `OPENAI_API_KEY` / `HF_TOKEN` secrets from `.env` |
 | `streamlit`, `streamlit-mic-recorder` | Demo UI and in-browser microphone capture |
