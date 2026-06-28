@@ -1,72 +1,105 @@
 # Guía de Instalación y Configuración de C.H.R.I.S.
 
+La instalación está automatizada: un solo script instala **todo** (el gestor
+`uv`, Python 3.12, el entorno virtual y todas las dependencias). Tú solo tienes
+que poner tu token. Funciona en **Linux, macOS y Windows**.
+
 ## Requisitos previos
 
-- **Sistema operativo:** Windows o Linux
-- **Python:** 3.10 o superior
-- **Git:** Instalado y configurado
-- **VTube Studio:** Instalar desde [Steam](https://store.steampowered.com/app/1325860/VTube_Studio/)  
-  (Necesario para la integración en tiempo real con el avatar VTuber)
-- Se recomienda conexión a internet para instalar dependencias
+- **Sistema operativo:** Linux, macOS o Windows
+- **Git:** instalado y configurado
+- **GPU NVIDIA** (opcional, recomendada): acelera la transcripción de voz. Sin
+  ella, el sistema funciona igual en CPU (un poco más lento).
+- Conexión a internet (para descargar dependencias y modelos la primera vez)
 
-## Clonar el repositorio
+> **No necesitas instalar Python tú mismo.** El script instala la versión exacta
+> (3.12) de forma aislada, sin tocar el Python del sistema.
+
+## 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/AmiyaMihari/Cognitive-Humanoid-Real-Time-Interactive-Streamer.git
 cd Cognitive-Humanoid-Real-Time-Interactive-Streamer
 ```
 
-## Crear un entorno virtual
+## 2. Instalación automática (recomendada)
 
-**Windows:**
+**Linux / macOS:**
 ```bash
-python -m venv venv
-venv\Scripts\activate
+chmod +x setup.sh
+./setup.sh
 ```
 
-**Linux/Mac:**
+**Windows (PowerShell):**
+```powershell
+./setup.ps1
+```
+> Si Windows bloquea la ejecución del script, córrelo una vez así:
+> `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
+
+El script instala `uv`, Python 3.12, crea el entorno virtual (`venv`), instala
+todas las dependencias y crea tu archivo `.env` a partir de la plantilla.
+
+## 3. Configurar tu token
+
+Abre el archivo **`.env`** (lo creó el script) y completa tu clave:
+
+```ini
+OPENAI_API_KEY=sk-...   # requerido: el módulo "mind" lo usa para responder
+HF_TOKEN=               # opcional: el modelo de voz es público, déjalo vacío
+```
+
+El archivo `.env` está en `.gitignore`, así que tu token nunca se sube al
+repositorio.
+
+## 4. Ejecutar el proyecto
+
+Activa el entorno y lanza la app de demostración:
+
+**Linux / macOS:**
 ```bash
-python3 -m venv venv
 source venv/bin/activate
+streamlit run app.py
 ```
 
-## Instalar dependencias
+**Windows (PowerShell):**
+```powershell
+venv\Scripts\Activate.ps1
+streamlit run app.py
+```
 
-Asegúrate de estar en el directorio raíz del proyecto y con el entorno virtual activado.
+La primera ejecución descarga los modelos de voz (≈3.3 GB) y los guarda en caché;
+las siguientes arrancan en segundos.
+
+> En Linux con la shell **fish**, el script instala un hook que **activa el
+> entorno automáticamente** al entrar a la carpeta del proyecto, así que puedes
+> saltarte el paso de `source venv/bin/activate`.
+
+## Instalación manual (alternativa)
+
+Si prefieres no usar el script, instala [`uv`](https://docs.astral.sh/uv/) y:
 
 ```bash
-pip install -r requirements.txt
+uv python install 3.12
+uv venv venv --python 3.12
+uv pip install --python venv/bin/python -r requirements.txt   # venv\Scripts\python.exe en Windows
+cp .env.example .env        # Copy-Item .env.example .env  en Windows
 ```
-
-## Configurar el entorno
-
-1. Renombra el archivo `.env.example` a `.env` si existe.
-2. Completa las variables necesarias en el archivo `.env` (por ejemplo, claves de API para Twitch, configuración de Vtube Studio, etc.).  
-   Si el archivo no existe, créalo según las instrucciones de la documentación o los módulos que desees utilizar.
-
-## Ejecutar el proyecto
-
-Este proyecto se encuentra en etapa de planeación/prototipo y la ejecución puede variar.  
-Si existe un archivo principal (por ejemplo, `main.py`), puedes ejecutarlo así:
-
-```bash
-python main.py
-```
-
-Revisa la documentación o los archivos de cada módulo para instrucciones específicas.
 
 ## Problemas comunes
 
-- **No se reconoce el comando `python`:**  
-  Prueba usar `python3` en su lugar.
-- **Faltan dependencias:**  
-  Verifica que ejecutaste `pip install -r requirements.txt` con el entorno virtual activo.
-- **Error de variables de entorno o claves:**  
-  Asegúrate de tener el archivo `.env` correctamente configurado.
-- **Problemas de permisos en Linux:**  
-  Usa `chmod +x script.sh` si algún script requiere permisos de ejecución.
-- **VTube Studio no detectado:**  
-  Verifica que VTube Studio está instalado y ejecutándose desde Steam antes de iniciar la integración.
+- **El script no se ejecuta en Windows:**
+  Usa `powershell -ExecutionPolicy Bypass -File .\setup.ps1`.
+- **`uv: command not found` tras instalarlo:**
+  Abre una terminal nueva (el instalador agrega `uv` al `PATH`) o vuelve a correr
+  el script.
+- **Error de autenticación al responder:**
+  Falta o es inválida la `OPENAI_API_KEY` en `.env`.
+- **La transcripción corre en CPU en vez de GPU:**
+  Verifica `nvidia-smi`. El sistema cae a CPU automáticamente si CUDA no
+  inicializa; consulta `docs/reference/senses/sense_ear/cuda.md`.
+- **Problemas de permisos en Linux:**
+  Usa `chmod +x setup.sh` antes de ejecutarlo.
 
 ## Soporte
 

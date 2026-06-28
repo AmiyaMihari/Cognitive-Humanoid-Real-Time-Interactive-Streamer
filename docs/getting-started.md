@@ -4,14 +4,36 @@ This guide takes you from a fresh checkout to a running speech-to-text demo.
 
 ## Prerequisites
 
-- **Linux** with an **NVIDIA GPU** (developed on an RTX 5070 Ti / Blackwell).
-  CPU-only also works — the module falls back automatically — just slower.
-- **NVIDIA driver** installed (`nvidia-smi` should work). You do **not** need a
-  matching CUDA toolkit: the required CUDA 12 libraries are installed as Python
-  wheels and loaded by the module itself.
-- **`ffmpeg`** on the `PATH` (used to decode audio).
-- **Python 3.12**, managed with [`uv`](https://docs.astral.sh/uv/). See
-  [architecture.md](architecture.md#why-python-312-via-uv) for why.
+- **Linux, macOS or Windows**, with **Git** installed.
+- An **NVIDIA GPU** is optional but recommended (developed on an RTX 5070 Ti /
+  Blackwell). CPU-only also works — `sense_ear` falls back automatically — just
+  slower. You do **not** need a matching CUDA toolkit: the required CUDA 12
+  libraries are installed as Python wheels and loaded by the module itself.
+
+> You do **not** need to install Python yourself. The setup below installs the
+> exact version (3.12) in isolation via [`uv`](https://docs.astral.sh/uv/), and
+> PyAV bundles the audio decoders, so no system `ffmpeg` is required. See
+> [architecture.md](architecture.md#why-python-312-via-uv) for the rationale.
+
+## Quick setup (recommended)
+
+One script installs everything — `uv`, Python 3.12, the virtualenv and all
+dependencies — and creates your `.env`:
+
+```bash
+# Linux / macOS
+chmod +x setup.sh
+./setup.sh
+```
+
+```powershell
+# Windows (PowerShell)
+./setup.ps1
+```
+
+Then jump to [step 3](#3-configure-your-api-keys) to add your API key. The rest
+of this page (steps 1–2) is the **manual alternative** if you'd rather run the
+commands yourself.
 
 ## 1. Install Python 3.12 and the virtual environment
 
@@ -24,8 +46,8 @@ uv python install 3.12
 uv venv --python 3.12 venv
 ```
 
-The fish shell auto-activates this `venv` whenever you `cd` into the project
-(via `~/.config/fish/conf.d/auto_venv.fish`), and deactivates it when you leave.
+On Linux with fish, `setup.sh` also installs a hook that auto-activates this
+`venv` whenever you `cd` into the project, and deactivates it when you leave.
 
 ## 2. Install dependencies
 
