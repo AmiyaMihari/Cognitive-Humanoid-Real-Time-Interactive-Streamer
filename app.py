@@ -9,6 +9,8 @@ Run with:  streamlit run app.py
 
 from __future__ import annotations
 
+import os
+
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 
@@ -31,7 +33,10 @@ def load_transcriber():
 
 def load_voice():
     """Return the shared TTS voice without loading Qwen until speech is needed."""
-    return get_voice()
+    voice = get_voice()
+    if _env_flag("CHRIS_VOICE_WARMUP", default=False):
+        _ = voice.engine
+    return voice
 
 
 # CSS that pins the input row to the bottom of the screen (ChatGPT-style) and
@@ -53,6 +58,13 @@ _PINNED_INPUT_CSS = """
 [data-testid="stMainBlockContainer"] { padding-bottom: 6rem; }
 </style>
 """
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 def main() -> None:

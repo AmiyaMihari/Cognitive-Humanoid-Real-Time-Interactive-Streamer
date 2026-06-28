@@ -6,6 +6,27 @@
 ## Descripción breve
 C.H.R.I.S. (también llamado Chris, Christopher o Kurisu) es un proyecto de IA VTuber, cuyo objetivo es crear un streamer virtual interactivo y autónomo.
 
+## Instalación rápida
+
+La instalación está automatizada. En Linux/macOS:
+
+```bash
+chmod +x setup.sh
+./setup.sh
+streamlit run app.py
+```
+
+En Windows, usa doble clic en `setup.bat`, o desde PowerShell:
+
+```powershell
+./setup.ps1
+streamlit run app.py
+```
+
+Los scripts instalan `uv`, Python 3.12, el `venv`, dependencias Python, intentan
+dejar SoX listo y crean `.env` desde `.env.example`. Luego solo falta poner
+`OPENAI_API_KEY` en `.env`. Más detalles en [INSTALL.md](INSTALL.md).
+
 A diferencia de otros proyectos similares, Chris está fundado en la investigación de Generative Agents: Interactive Simulacra of Human Behavior (2023, https://arxiv.org/abs/2304.03442).
 
 Chris está fundamentado en seguir la construcción de una "persona", o que simule serlo (es decir, sea capaz de pasar el Test de Turing, o ser indistinguible entre hablar con un humano y una máquina).

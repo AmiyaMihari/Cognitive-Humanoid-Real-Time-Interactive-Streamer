@@ -17,8 +17,8 @@ them in the normal Hugging Face cache, or in `CHRIS_VOICE_CACHE` if set.
 | Setting | Value |
 | --- | --- |
 | Model | `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` |
-| Language | `Auto` |
-| Voice description | `Speak in an incredulous tone, but with a hint of panic beginning to creep into our voice. Cute anime soft femboy voice.` |
+| Language | `Spanish` |
+| Voice description | Cute, soft anime femboy voice; native Latin American Spanish pronunciation; calm medium-paced delivery; controlled volume; dry tsundere wit; no shouting. |
 
 ## API (internal)
 

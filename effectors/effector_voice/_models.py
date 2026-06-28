@@ -11,10 +11,14 @@ import os
 from pathlib import Path
 
 DEFAULT_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
-DEFAULT_LANGUAGE = "Auto"
+DEFAULT_LANGUAGE = "Spanish"
 DEFAULT_VOICE_DESCRIPTION = (
-    "Speak in sassy, cute, and soft tones, like a female in her 20s"
-    "into our voice. Cute anime soft femboy voice."
+    "Cute, soft anime femboy voice; youthful, gentle, and clear. Native Latin "
+    "American Spanish pronunciation with no English or Spanglish accent. Calm, "
+    "conversational delivery at a medium pace and controlled volume. Dry, "
+    "cynical, carefree tsundere wit; lightly sharp-tongued and intellectual, "
+    "but not angry. No swearing, no shouting, and avoid dramatic rising "
+    "intonation at sentence endings."
 )
 
 

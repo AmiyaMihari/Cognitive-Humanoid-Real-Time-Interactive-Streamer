@@ -14,7 +14,7 @@ Turns text into spoken-audio files using Qwen3-TTS.
 ```python
 Voice(
     voice: str = DEFAULT_VOICE_DESCRIPTION,
-    lang: str = "Auto",
+    lang: str = "Spanish",
     speed: float = 1.0,
     output_dir: str | Path | None = None,
     model: str | None = None,
@@ -26,14 +26,17 @@ Voice(
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `voice` | project voice description | Natural-language voice/style instruction sent to `generate_voice_design`. |
-| `lang` | `"Auto"` | Language sent to Qwen3-TTS. `Auto` lets the model adapt to the input text. |
+| `voice` | project voice description | Natural-language vocal direction sent to `generate_voice_design`. Keep it focused on sound, accent, energy, pace and delivery. |
+| `lang` | `"Spanish"` | Language sent to Qwen3-TTS. `Spanish` keeps the accent more stable for Spanish replies; set `CHRIS_VOICE_LANGUAGE=Auto` to restore automatic language detection. |
 | `speed` | `1.0` | Optional post-generation time stretch. `>1.0` is faster, `<1.0` slower. |
 | `output_dir` | `None` | Directory for generated WAVs. Defaults to `<tempdir>/chris_voice`. |
 | `model` | `None` | Hugging Face model id or local path. Defaults to `CHRIS_VOICE_MODEL` or `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign`. |
 | `device` | `None` | Device map. Defaults to `CHRIS_VOICE_DEVICE`, then `cuda:0` if CUDA is available, otherwise `cpu`. |
 | `dtype` | `None` | `auto`, `bfloat16`, `float16` or `float32`. Defaults to `CHRIS_VOICE_DTYPE` or `auto`. |
 | `attn_implementation` | `None` | Optional Transformers attention implementation. |
+
+`CHRIS_VOICE_MAX_NEW_TOKENS` defaults to `2048`. Lower values generate faster
+but can cut long answers; higher values may need more VRAM.
 
 By default the loader sets `torch.backends.cudnn.enabled = False` for the
 Qwen3-TTS process path. On the local PyTorch cu130/Blackwell stack, Qwen3-TTS
@@ -64,6 +67,17 @@ Synthesize `text` to a WAV file and return its path.
 - **`path`** - optional destination. If omitted, a uniquely named file is written
   under `output_dir`.
 - **Returns** - `pathlib.Path` to the written WAV.
+
+#### `clear_cuda_cache() -> None`
+
+Release temporary PyTorch CUDA allocations after synthesis. This does not unload
+the model weights; it only asks PyTorch to return cached temporary buffers.
+
+#### `unload() -> None`
+
+Drop the Qwen3-TTS engine from memory and clear CUDA cache. `app.py` uses this
+before microphone transcription so Whisper and Qwen3-TTS are not held in VRAM at
+the same time.
 
 ## Examples
 

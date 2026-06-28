@@ -9,6 +9,12 @@ REM Usage: double-click this file, or run `setup.bat` from a terminal.
 
 REM %~dp0 is the folder this .bat lives in, so it finds setup.ps1 next to it.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
+if errorlevel 1 (
+    echo.
+    echo Setup failed. Review the messages above.
+    pause
+    exit /b 1
+)
 
 echo.
 echo Done. You can close this window.

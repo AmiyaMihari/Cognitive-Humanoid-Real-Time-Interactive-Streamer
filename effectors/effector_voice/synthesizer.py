@@ -29,7 +29,7 @@ class Voice:
     """Turns text into spoken-audio files using Qwen3-TTS VoiceDesign.
 
     The default instruction describes the custom voice for this project.
-    ``language`` defaults to ``"Auto"`` so Qwen3-TTS can adapt to the input text.
+    ``language`` defaults to ``"Spanish"`` to keep Spanish pronunciation stable.
     """
 
     def __init__(
@@ -44,7 +44,7 @@ class Voice:
         attn_implementation: str | None = None,
     ) -> None:
         self.voice = voice
-        self.lang = lang
+        self.lang = os.environ.get("CHRIS_VOICE_LANGUAGE") or lang
         self.speed = speed
         self.model = model or get_model_id()
         self.device = device or os.environ.get("CHRIS_VOICE_DEVICE")
@@ -52,7 +52,7 @@ class Voice:
         self.attn_implementation = attn_implementation or os.environ.get(
             "CHRIS_VOICE_ATTN"
         )
-        self.max_new_tokens = int(os.environ.get("CHRIS_VOICE_MAX_NEW_TOKENS", "768"))
+        self.max_new_tokens = int(os.environ.get("CHRIS_VOICE_MAX_NEW_TOKENS", "2048"))
         self._engine = None  # lazily built; see `engine`
         self._output_dir = Path(output_dir) if output_dir else Path(tempfile.gettempdir()) / "chris_voice"
         self._output_dir.mkdir(parents=True, exist_ok=True)

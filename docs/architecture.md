@@ -131,14 +131,38 @@ The engine is **Qwen3-TTS VoiceDesign**, selected because the voice can be
 described directly in natural language while keeping the same module boundary:
 the rest of the app still sends text and receives a WAV path.
 
-- **Custom voice by instruction.** The default voice prompt is: `Speak in an
-  incredulous tone, but with a hint of panic beginning to creep into our voice.
-  Cute anime soft femboy voice.`
-- **Automatic language.** The module sends `language="Auto"` so Qwen3-TTS can
-  adapt to Spanish, English and the other languages it supports.
+- **Custom voice by instruction.** The default voice prompt is intentionally
+  short and acoustic: cute soft anime femboy timbre, native Latin American
+  Spanish pronunciation, medium pace, controlled volume, calm conversational
+  delivery, and dry tsundere wit without shouting.
+- **Stable Spanish pronunciation.** The module sends `language="Spanish"` by
+  default to avoid accidental English-like pronunciation in mixed Spanish text.
+  Set `CHRIS_VOICE_LANGUAGE=Auto` to restore automatic language detection.
 - **Local inference.** The model runs through the `qwen-tts` package and caches
   weights locally through Hugging Face. It prefers CUDA when available, with CPU
   as a functional fallback.
+
+#### Qwen3-TTS operational notes
+
+The current app streams **text** from `mind`, but it synthesizes **one full WAV**
+per assistant answer. Earlier phrase-by-phrase synthesis reduced perceived
+latency, but Qwen3-TTS VoiceDesign reinterpreted the voice instruction on each
+chunk, causing different voices across paragraphs and overlapping autoplay in
+Streamlit. A single synthesis call keeps the voice coherent for the full reply.
+
+Qwen3-TTS loads lazily by default: opening Streamlit does not immediately put the
+1.7B TTS model in VRAM. This avoids CUDA out-of-memory errors when Whisper and
+Qwen are accidentally loaded by multiple Streamlit/Python processes. Set
+`CHRIS_VOICE_WARMUP=1` to load Qwen3-TTS at app startup instead, trading higher
+startup VRAM for a faster first spoken reply.
+
+The local PyTorch cu130/Blackwell stack hit a
+`CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH` during Qwen3-TTS audio decoding, so
+the voice module disables cuDNN for Qwen by default
+(`CHRIS_VOICE_DISABLE_CUDNN=1`). CUDA is still used; only cuDNN-backed kernels
+are avoided for this module. The generated audio length is capped by
+`CHRIS_VOICE_MAX_NEW_TOKENS` (`2048` by default): raise it for very long spoken
+answers, or lower it if VRAM becomes tight.
 
 ### Tuned for short, real-time audio
 

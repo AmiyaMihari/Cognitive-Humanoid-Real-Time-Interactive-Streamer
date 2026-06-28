@@ -9,6 +9,8 @@ This guide takes you from a fresh checkout to a running speech-to-text demo.
   Blackwell). CPU-only also works — `sense_ear` falls back automatically — just
   slower. You do **not** need a matching CUDA toolkit: the required CUDA 12
   libraries are installed as Python wheels and loaded by the module itself.
+- **SoX** is optional but recommended for the Qwen3-TTS audio stack. `setup.sh`
+  and `setup.ps1` try to install it automatically when possible.
 
 > You do **not** need to install Python yourself. The setup below installs the
 > exact version (3.12) in isolation via [`uv`](https://docs.astral.sh/uv/), and
@@ -17,8 +19,8 @@ This guide takes you from a fresh checkout to a running speech-to-text demo.
 
 ## Quick setup (recommended)
 
-One script installs everything — `uv`, Python 3.12, the virtualenv and all
-dependencies — and creates your `.env`:
+One script installs everything — `uv`, SoX when possible, Python 3.12, the
+virtualenv and all dependencies — and creates your `.env`:
 
 ```bash
 # Linux / macOS
@@ -71,6 +73,9 @@ Then edit `.env`:
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | **Yes** | `mind` | The thinking module sends text to an OpenAI model; without it, replies fail. Get one at <https://platform.openai.com/api-keys>. |
 | `HF_TOKEN` | No | `sense_ear` | The Spanish `large-v3` weights are public. Set a token only to avoid anonymous download rate limits, or for a gated model. |
+| `CHRIS_VOICE_LANGUAGE` | No | `effector_voice` | Defaults to `Spanish` to keep Qwen3-TTS pronunciation stable. |
+| `CHRIS_VOICE_WARMUP` | No | `app.py` | `0` keeps startup VRAM low; `1` loads Qwen3-TTS at app startup so the first audio is faster. |
+| `CHRIS_VOICE_MAX_NEW_TOKENS` | No | `effector_voice` | Defaults to `2048`; raise it if very long replies are cut. |
 
 ```ini
 OPENAI_API_KEY=sk-...
@@ -94,8 +99,9 @@ short phrase, and tap **⏹️** to stop. Your words appear in the chat (transcr
 by `sense_ear` when spoken), then `mind` replies and `effector_voice` **speaks the reply
 out loud** (with a player you can replay). The full path is
 **audio → text → reply → speech**. The first run downloads the `large-v3` model
-(~3 GB) and the Qwen3-TTS VoiceDesign weights and caches them; later runs start
-faster.
+(~3 GB) and the Qwen3-TTS 1.7B VoiceDesign weights (~4.3 GB) and caches them;
+later runs reuse the cache. The first spoken reply can still take a moment while
+Qwen3-TTS loads; set `CHRIS_VOICE_WARMUP=1` to load it when Streamlit starts.
 
 ## 5. Use the modules from your own code
 
@@ -127,3 +133,6 @@ Full APIs (inputs, return values, options) are in
 | Empty string returned | No speech was detected in the clip (silence/noise). That is the expected result. |
 | Reply errors / auth failure from `mind` | `OPENAI_API_KEY` is missing or invalid. Check your `.env` (step 3) and that the key is active. |
 | `SoX could not be found` during Qwen3-TTS import | Install the system SoX binary (`sudo pacman -S sox` on Arch/Manjaro, `sudo apt install sox` on Debian/Ubuntu). The Python package is installed by `requirements.txt`, but the optional command-line binary is system-level. |
+| Voice has a Spanglish accent | Keep `CHRIS_VOICE_LANGUAGE=Spanish`; `Auto` is more flexible but less stable for Spanish. |
+| Voice audio is cut short | Increase `CHRIS_VOICE_MAX_NEW_TOKENS` in `.env` and restart Streamlit. |
+| CUDA out of memory | Stop old Streamlit/Python processes and check `nvidia-smi`; two app servers can load multiple GPU models at once. |

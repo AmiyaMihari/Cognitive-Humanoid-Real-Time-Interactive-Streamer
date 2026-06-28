@@ -25,7 +25,7 @@ That single call:
 
 1. Lazily builds a shared `Voice` the first time it runs.
 2. Loads the Qwen3-TTS VoiceDesign model, downloading weights on first use.
-3. Synthesizes the text with language set to `Auto` and the default custom voice
+3. Synthesizes the text with language set to `Spanish` and the default custom voice
    description.
 4. Writes a WAV file and returns its `Path`.
 
@@ -74,9 +74,10 @@ The configurable engine. Constructor summary:
 
 ```python
 Voice(
-    voice="Speak in an incredulous tone, but with a hint of panic beginning "
-          "to creep into our voice. Cute anime soft femboy voice.",
-    lang="Auto",
+    voice="Cute, soft anime femboy voice; youthful, gentle, and clear. "
+          "Native Latin American Spanish pronunciation. Calm, conversational "
+          "delivery at a medium pace...",
+    lang="Spanish",
     speed=1.0,
     output_dir=None,
     model=None,
@@ -98,10 +99,16 @@ Methods: `Voice.speak(text, path=None) -> Path` (write a file) and
 - **Model loads once.** The first call (or `Voice.engine` access) downloads and
   loads the model. Subsequent calls reuse the same in-process engine.
 - **Default model.** `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign`.
-- **Default language.** `Auto`, letting Qwen3-TTS adapt to Spanish, English and
-  other supported languages.
-- **Default voice instruction.** `Speak in an incredulous tone, but with a hint
-  of panic beginning to creep into our voice. Cute anime soft femboy voice.`
+- **Default language.** `Spanish`, which keeps the Spanish accent more stable
+  than `Auto` for mixed text, formulas and occasional English terms.
+- **Default voice instruction.** A compact vocal direction: cute soft anime
+  femboy timbre, native Latin American Spanish pronunciation, calm medium-paced
+  delivery, controlled volume, dry tsundere wit, no shouting.
+- **One WAV per answer in the app.** `app.py` streams the assistant text, then
+  calls this module once for the full reply. That avoids Qwen3-TTS redesigning a
+  different voice for each paragraph.
+- **Lazy model load by default.** Qwen3-TTS loads on first speech so Streamlit
+  opens with low VRAM use. Set `CHRIS_VOICE_WARMUP=1` to load it at app startup.
 
 ---
 
@@ -111,10 +118,13 @@ Methods: `Voice.speak(text, path=None) -> Path` (write a file) and
 | --- | --- |
 | `CHRIS_VOICE_MODEL` | Hugging Face model id or local model directory. |
 | `CHRIS_VOICE_CACHE` | Optional Hugging Face cache directory for Qwen3-TTS weights. |
+| `CHRIS_VOICE_LANGUAGE` | Language passed to Qwen3-TTS. Defaults to `Spanish`; set `Auto` to restore automatic language detection. |
 | `CHRIS_VOICE_DEVICE` | Device map passed to Qwen3-TTS, for example `cuda:0` or `cpu`. Defaults to CUDA when available. |
 | `CHRIS_VOICE_DTYPE` | `auto`, `bfloat16`, `float16` or `float32`. Defaults to `auto`. |
 | `CHRIS_VOICE_ATTN` | Optional Transformers attention implementation, for example `flash_attention_2` if installed. |
 | `CHRIS_VOICE_DISABLE_CUDNN` | Defaults to `1`. Disables cuDNN only for Qwen3-TTS to avoid a local PyTorch cu130/Blackwell decode mismatch. Set `0` to try cuDNN again after upgrading the stack. |
+| `CHRIS_VOICE_MAX_NEW_TOKENS` | Generation cap for the audio codes. Defaults to `2048`; lower values are faster but can cut long answers. |
+| `CHRIS_VOICE_WARMUP` | App-level option. Set `1` to load Qwen-TTS when Streamlit starts; default `0` loads it on first speech to keep VRAM free. |
 
 ---
 

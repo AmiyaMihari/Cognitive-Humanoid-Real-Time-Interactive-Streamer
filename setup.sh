@@ -27,11 +27,41 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2. Install the exact Python the project is pinned to.
+# 2. Ensure the optional SoX command-line tool exists. Qwen3-TTS can import
+#    without it, but installing it avoids warnings and keeps audio tooling ready.
+install_sox() {
+  if command -v sox >/dev/null 2>&1; then
+    echo "==> SoX found: $(command -v sox)"
+    return
+  fi
+
+  echo "==> SoX was not found; trying a best-effort system install..."
+  if command -v pacman >/dev/null 2>&1; then
+    sudo pacman -S --needed --noconfirm sox || true
+  elif command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y sox || true
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y sox || true
+  elif command -v brew >/dev/null 2>&1; then
+    brew install sox || true
+  else
+    echo "==> No supported package manager found for SoX; continuing."
+  fi
+
+  if command -v sox >/dev/null 2>&1; then
+    echo "==> SoX installed: $(command -v sox)"
+  else
+    echo "==> SoX is still missing. Install it manually if Qwen3-TTS warns about it."
+  fi
+}
+
+install_sox
+
+# 3. Install the exact Python the project is pinned to.
 echo "==> Installing Python 3.12..."
 uv python install 3.12
 
-# 3. Create the virtualenv (skip if it already exists).
+# 4. Create the virtualenv (skip if it already exists).
 if [ ! -d venv ]; then
   echo "==> Creating virtualenv (venv)..."
   uv venv venv --python 3.12
@@ -45,17 +75,17 @@ if [ ! -x venv/bin/python ]; then
   exit 1
 fi
 
-# 4. Install all dependencies into the venv (note: --python venv/bin/python).
+# 5. Install all dependencies into the venv (note: --python venv/bin/python).
 echo "==> Installing dependencies into the venv (first run can take a few minutes)..."
 uv pip install --python venv/bin/python -r requirements.txt
 
-# 5. Create .env from the template if it doesn't exist yet.
+# 6. Create .env from the template if it doesn't exist yet.
 if [ ! -f .env ]; then
   cp .env.example .env
   echo "==> Created .env from template (.env.example)."
 fi
 
-# 6. (Optional) Install the venv auto-activation hook for the shells in use, so
+# 7. (Optional) Install the venv auto-activation hook for the shells in use, so
 #    the venv activates by itself when you cd into the project. Both are
 #    idempotent and only ever added once.
 repo="$(pwd)"
@@ -93,7 +123,8 @@ cat <<'DONE'
    2. Activate the venv:            source venv/bin/activate
    3. Run the app:                  streamlit run app.py
 
- The first run downloads the speech model plus Qwen3-TTS voice
- weights and caches them; later runs start faster.
+ The first run downloads Whisper (~3 GB), Qwen3-TTS 1.7B
+ VoiceDesign (~4.3 GB), and PyTorch/CUDA wheels. They are
+ cached; later runs reuse them.
 ============================================================
 DONE

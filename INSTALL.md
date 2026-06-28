@@ -8,8 +8,12 @@ que poner tu token. Funciona en **Linux, macOS y Windows**.
 
 - **Sistema operativo:** Linux, macOS o Windows
 - **Git:** instalado y configurado
-- **GPU NVIDIA** (opcional, recomendada): acelera la transcripción de voz. Sin
-  ella, el sistema funciona igual en CPU (un poco más lento).
+- **GPU NVIDIA** (recomendada): acelera transcripción y Qwen3-TTS. CPU puede
+  funcionar, pero la voz local será mucho más lenta.
+- **SoX** (opcional, recomendado): los scripts intentan instalarlo
+  automáticamente. Si no pueden, puedes instalarlo luego (`sudo pacman -S sox`,
+  `sudo apt install sox`, `brew install sox`, o un instalador/winget en
+  Windows).
 - Conexión a internet (para descargar dependencias y modelos la primera vez)
 
 > **No necesitas instalar Python tú mismo.** El script instala la versión exacta
@@ -39,8 +43,10 @@ chmod +x setup.sh
   > Si Windows bloquea la ejecución del script, córrelo una vez así:
   > `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
 
-El script instala `uv`, Python 3.12, crea el entorno virtual (`venv`), instala
-todas las dependencias y crea tu archivo `.env` a partir de la plantilla.
+El script instala `uv`, intenta dejar SoX listo, instala Python 3.12, crea el
+entorno virtual (`venv`), instala todas las dependencias y crea tu archivo
+`.env` a partir de la plantilla. Puedes volver a ejecutar el script después de
+un `git pull`; es idempotente y solo instala lo que falte.
 
 ## 3. Configurar tu token
 
@@ -49,6 +55,16 @@ Abre el archivo **`.env`** (lo creó el script) y completa tu clave:
 ```ini
 OPENAI_API_KEY=sk-...   # requerido: el módulo "mind" lo usa para responder
 HF_TOKEN=               # opcional: el modelo de voz es público, déjalo vacío
+```
+
+Los valores de voz ya tienen defaults seguros en `.env.example`:
+
+```ini
+CHRIS_VOICE_MODEL=                         # default: Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign
+CHRIS_VOICE_LANGUAGE=Spanish               # evita acento Spanglish accidental
+CHRIS_VOICE_DISABLE_CUDNN=1                # workaround para PyTorch cu130/Blackwell
+CHRIS_VOICE_MAX_NEW_TOKENS=2048            # evita cortes prematuros en respuestas largas
+CHRIS_VOICE_WARMUP=0                       # 1 = carga Qwen al abrir la app; 0 = menor VRAM inicial
 ```
 
 El archivo `.env` está en `.gitignore`, así que tu token nunca se sube al
@@ -70,8 +86,15 @@ venv\Scripts\Activate.ps1
 streamlit run app.py
 ```
 
-La primera ejecución descarga los modelos de voz (≈3.3 GB) y los guarda en caché;
-las siguientes arrancan en segundos.
+La primera ejecución descarga modelos y wheels grandes:
+
+- Whisper `large-v3`: alrededor de **3 GB**.
+- Qwen3-TTS 1.7B VoiceDesign: alrededor de **4.3 GB** en cache de Hugging Face.
+- PyTorch/CUDA/triton y dependencias: pueden ocupar varios GB en cache de `uv`.
+
+Las siguientes ejecuciones reutilizan esos archivos. El primer audio puede
+tardar porque Qwen3-TTS se carga al hablar; pon `CHRIS_VOICE_WARMUP=1` si
+prefieres cargarlo al abrir Streamlit.
 
 > En Linux, el script instala un hook que **activa el entorno automáticamente**
 > al entrar a la carpeta del proyecto (para **bash** vía `~/.bashrc` y para
@@ -132,6 +155,18 @@ cp .env.example .env        # Copy-Item .env.example .env  en Windows
 - **La transcripción corre en CPU en vez de GPU:**
   Verifica `nvidia-smi`. El sistema cae a CPU automáticamente si CUDA no
   inicializa; consulta `docs/reference/senses/sense_ear/cuda.md`.
+- **La voz tarda mucho en la primera respuesta:**
+  Es normal si `CHRIS_VOICE_WARMUP=0`; Qwen3-TTS se carga en la primera síntesis.
+  Usa `CHRIS_VOICE_WARMUP=1` si quieres pagar ese costo al arrancar la app.
+- **El audio se corta en respuestas largas:**
+  Sube `CHRIS_VOICE_MAX_NEW_TOKENS` en `.env`. El default actual es `2048`.
+- **Out of memory en CUDA:**
+  Cierra procesos viejos de Streamlit/Python y revisa `nvidia-smi`. La app
+  intenta no mantener Whisper y Qwen cargados a la vez, pero dos servidores
+  Streamlit abiertos sí pueden llenar VRAM.
+- **Acento raro o Spanglish:**
+  Mantén `CHRIS_VOICE_LANGUAGE=Spanish`. Si quieres que Qwen detecte idioma por
+  sí mismo, cambia a `Auto`, pero puede variar más el acento.
 - **Problemas de permisos en Linux:**
   Usa `chmod +x setup.sh` antes de ejecutarlo.
 
