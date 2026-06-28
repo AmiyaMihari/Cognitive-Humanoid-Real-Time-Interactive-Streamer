@@ -14,6 +14,7 @@ Design goals:
 
 from __future__ import annotations
 
+import gc
 import io
 import os
 from typing import BinaryIO, Union
@@ -117,6 +118,11 @@ class Transcriber:
         )
 
         return " ".join(segment.text.strip() for segment in segments).strip()
+
+    def unload(self) -> None:
+        """Unload Whisper so another GPU-heavy module can use the VRAM."""
+        self._model = None
+        gc.collect()
 
     @staticmethod
     def _coerce_audio(audio: AudioInput):

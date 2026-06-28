@@ -6,18 +6,33 @@ Public contract is deliberately tiny: give it text, get back an audio file.
     >>> path = speak("Hola, soy Chris.")   # -> Path to a WAV file
 
 It is the spoken counterpart of `mind`: where `mind` turns text into a reply,
-this effector turns that reply into sound. Backed by Kokoro (a small, fast,
-local, free TTS model) running on CPU, with a youthful Spanish female voice by
-default. The model is built once and cached, so repeated calls are cheap.
+this effector turns that reply into sound. Backed by Qwen3-TTS VoiceDesign, with
+a custom voice instruction by default. The model is built once and cached, so
+repeated calls are cheap.
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from .synthesizer import Voice
 
 __all__ = ["speak", "Voice", "get_voice"]
+
+
+def _load_settings() -> None:
+    """Load optional voice settings from the project .env file."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    load_dotenv(os.path.join(root, ".env"), override=False)
+    load_dotenv(override=False)
+
+
+_load_settings()
 
 # Process-wide singleton so the model is only built once.
 _default: Voice | None = None

@@ -32,7 +32,7 @@ reference/
   - [effectors/effector_voice/synthesizer.md](effectors/effector_voice/synthesizer.md)
     — the `Voice` class in detail.
   - [effectors/effector_voice/models.md](effectors/effector_voice/models.md) —
-    internal Kokoro model-file caching.
+    internal Qwen3-TTS defaults and cache configuration.
 - [mind/](mind/README.md) — **the thinking module**: send it text, get a reply.
   - [mind/agent.md](mind/agent.md) — the `Mind` class and its LangGraph graph.
 - [senses/](senses/README.md) — the perception package.

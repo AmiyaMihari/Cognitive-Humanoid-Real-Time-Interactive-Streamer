@@ -31,11 +31,12 @@ That single call:
 
 ## Public API
 
-The module exports exactly three names (`__all__`):
+The module exports these names (`__all__`):
 
 | Name | Kind | Summary |
 | --- | --- | --- |
 | [`think(text)`](#thinktext---str) | function | One-shot convenience: text → reply using a shared `Mind`. |
+| [`think_stream(text)`](#think_streamtext) | function | Streaming convenience: yields reply text chunks from the shared `Mind`. |
 | [`get_mind()`](#get_mind---mind) | function | Returns the process-wide shared `Mind`. |
 | [`Mind`](#class-mind) | class | The engine; construct one directly to pick a different model. |
 
@@ -52,6 +53,11 @@ from mind import think
 
 print(think("Summarize what I just said in one sentence."))
 ```
+
+### `think_stream(text)`
+
+Yield the shared default `Mind`'s reply incrementally. `app.py` uses this to
+begin TTS on complete phrases before the full reply has finished.
 
 ### `get_mind() -> Mind`
 
@@ -76,8 +82,8 @@ Mind(
 )
 ```
 
-Main method — `Mind.think(text) -> str` — same input/return contract as the
-module-level `think()`.
+Main methods: `Mind.think(text) -> str`, same input/return contract as the
+module-level `think()`, and `Mind.stream(text)`, which yields text chunks.
 
 ---
 

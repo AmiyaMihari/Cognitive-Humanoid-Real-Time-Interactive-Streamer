@@ -45,6 +45,12 @@ Process one piece of text and return the model's reply.
 Internally it invokes the graph with a single user message and returns
 `result["messages"][-1].content`.
 
+#### `stream(text: str) -> Iterator[str]`
+
+Stream one reply as text chunks. This uses the same `ChatOpenAI` client directly
+so callers that need progressive UI updates can start work before the complete
+reply string is available.
+
 ## The graph
 
 ```

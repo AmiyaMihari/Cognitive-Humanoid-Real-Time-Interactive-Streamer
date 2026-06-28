@@ -1,50 +1,29 @@
-"""Model-file management for the Kokoro voice (internal).
+"""Qwen3-TTS model configuration for the voice effector (internal).
 
-The Kokoro ONNX model and its voice pack are a few hundred MB, so they are not
-vendored in the repo. They are downloaded once to a user cache directory and
-reused forever after — the same pattern faster-whisper uses for its weights.
+Qwen3-TTS model weights are not vendored in this repository. The
+``qwen_tts``/Hugging Face stack downloads them lazily on first use and reuses
+the normal Hugging Face cache afterwards.
 """
 
 from __future__ import annotations
 
 import os
-import urllib.request
 from pathlib import Path
 
-# Kokoro v1.0 ONNX assets (Apache-2.0). Pinned to a specific release so the
-# voice never changes underneath us.
-_BASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
-_FILES = {
-    "kokoro-v1.0.onnx": f"{_BASE}/kokoro-v1.0.onnx",  # ~310 MB, the acoustic model
-    "voices-v1.0.bin": f"{_BASE}/voices-v1.0.bin",    # ~27 MB, the voice embeddings
-}
-
-# Cache location: override with CHRIS_VOICE_CACHE, else ~/.cache/chris/voice.
-_CACHE_DIR = Path(
-    os.environ.get("CHRIS_VOICE_CACHE", Path.home() / ".cache" / "chris" / "voice")
+DEFAULT_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+DEFAULT_LANGUAGE = "Auto"
+DEFAULT_VOICE_DESCRIPTION = (
+    "Speak in sassy, cute, and soft tones, like a female in her 20s"
+    "into our voice. Cute anime soft femboy voice."
 )
 
 
-def _download(url: str, dest: Path) -> None:
-    """Download ``url`` to ``dest`` atomically (via a .part temp file)."""
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".part")
-    with urllib.request.urlopen(url) as response, open(tmp, "wb") as out:
-        while chunk := response.read(1 << 20):  # 1 MiB at a time
-            out.write(chunk)
-    tmp.replace(dest)
+def get_model_id() -> str:
+    """Return the Qwen3-TTS model id or local path to load."""
+    return os.environ.get("CHRIS_VOICE_MODEL") or DEFAULT_MODEL_ID
 
 
-def ensure_model_files() -> tuple[Path, Path]:
-    """Return (model_path, voices_path), downloading them on first use.
-
-    Idempotent: existing files are reused. Returns the paths in the order
-    expected by ``kokoro_onnx.Kokoro(model, voices)``.
-    """
-    paths: dict[str, Path] = {}
-    for name, url in _FILES.items():
-        dest = _CACHE_DIR / name
-        if not dest.exists():
-            _download(url, dest)
-        paths[name] = dest
-    return paths["kokoro-v1.0.onnx"], paths["voices-v1.0.bin"]
+def get_cache_dir() -> Path | None:
+    """Return the optional Hugging Face cache override for voice models."""
+    cache_dir = os.environ.get("CHRIS_VOICE_CACHE")
+    return Path(cache_dir).expanduser() if cache_dir else None

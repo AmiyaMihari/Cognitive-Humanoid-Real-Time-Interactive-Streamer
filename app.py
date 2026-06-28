@@ -12,9 +12,9 @@ from __future__ import annotations
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 
-from mind import think
+from mind import think_stream
 from senses.sense_ear import get_transcriber
-from effectors.effector_voice import get_voice, speak
+from effectors.effector_voice import get_voice
 
 st.set_page_config(page_title="C.H.R.I.S.", page_icon="🎙️")
 
@@ -29,12 +29,9 @@ def load_transcriber():
     return transcriber
 
 
-@st.cache_resource(show_spinner="Loading the voice model (first run only)...")
 def load_voice():
-    """Build the TTS voice once and keep it warm across reruns/sessions."""
-    voice = get_voice()
-    _ = voice.engine  # force the (slow) model load to happen here
-    return voice
+    """Return the shared TTS voice without loading Qwen until speech is needed."""
+    return get_voice()
 
 
 # CSS that pins the input row to the bottom of the screen (ChatGPT-style) and
@@ -59,8 +56,7 @@ _PINNED_INPUT_CSS = """
 
 
 def main() -> None:
-    transcriber = load_transcriber()
-    load_voice()  # warm the TTS model so the first reply speaks without delay
+    voice = load_voice()
     st.markdown(_PINNED_INPUT_CSS, unsafe_allow_html=True)
 
     if "messages" not in st.session_state:
@@ -81,23 +77,35 @@ def main() -> None:
     st.session_state.play_latest = False
 
     def reply_to(user_text: str) -> None:
-        """Store the user's words, ask `mind` for a reply, then speak it."""
+        """Store the user's words, stream a text reply, then speak it once."""
         st.session_state.messages.append({"role": "user", "content": user_text})
-        with st.spinner("Thinking..."):
-            answer = think(user_text)
-        # Always voice the reply. TTS is best-effort: if it fails, the text reply
-        # still stands rather than breaking the chat.
+        with st.chat_message("user"):
+            st.markdown(user_text)
+
+        answer_parts: list[str] = []
         audio_path = None
-        try:
-            with st.spinner("Speaking..."):
-                audio_path = str(speak(answer))
-        except Exception:
-            audio_path = None
+
+        with st.chat_message("assistant"):
+            text_slot = st.empty()
+            with st.spinner("Thinking..."):
+                for delta in think_stream(user_text):
+                    answer_parts.append(delta)
+                    text_slot.markdown("".join(answer_parts))
+
+            answer = "".join(answer_parts)
+            try:
+                with st.spinner("Speaking..."):
+                    audio_path = str(voice.speak(answer))
+            except Exception as exc:
+                st.session_state.last_tts_error = str(exc)
+                audio_path = None
+            if audio_path:
+                st.audio(audio_path, format="audio/wav", autoplay=True)
+
         st.session_state.messages.append(
             {"role": "assistant", "content": answer, "audio": audio_path}
         )
-        st.session_state.play_latest = True
-        st.rerun()
+        st.session_state.play_latest = False
 
     # Input row: a text box with the mic icon to its right (ChatGPT-style),
     # pinned to the bottom of the screen via the CSS above.
@@ -119,7 +127,10 @@ def main() -> None:
     # Speech path: transcribe, then reply. Silence is simply ignored.
     if audio and audio.get("bytes"):
         with st.spinner("Transcribing..."):
+            voice.unload()
+            transcriber = load_transcriber()
             text = transcriber.transcribe(audio["bytes"])
+            transcriber.unload()
         if text:
             reply_to(text)
 

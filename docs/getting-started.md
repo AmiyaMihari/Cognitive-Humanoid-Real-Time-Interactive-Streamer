@@ -94,8 +94,8 @@ short phrase, and tap **⏹️** to stop. Your words appear in the chat (transcr
 by `sense_ear` when spoken), then `mind` replies and `effector_voice` **speaks the reply
 out loud** (with a player you can replay). The full path is
 **audio → text → reply → speech**. The first run downloads the `large-v3` model
-(~3 GB) and the Kokoro voice (~340 MB) and caches them; later runs start in
-seconds.
+(~3 GB) and the Qwen3-TTS VoiceDesign weights and caches them; later runs start
+faster.
 
 ## 5. Use the modules from your own code
 
@@ -126,3 +126,4 @@ Full APIs (inputs, return values, options) are in
 | Runs on CPU instead of GPU | Check `nvidia-smi`. The module falls back to CPU if CUDA initialization fails; see `Transcriber.device`. |
 | Empty string returned | No speech was detected in the clip (silence/noise). That is the expected result. |
 | Reply errors / auth failure from `mind` | `OPENAI_API_KEY` is missing or invalid. Check your `.env` (step 3) and that the key is active. |
+| `SoX could not be found` during Qwen3-TTS import | Install the system SoX binary (`sudo pacman -S sox` on Arch/Manjaro, `sudo apt install sox` on Debian/Ubuntu). The Python package is installed by `requirements.txt`, but the optional command-line binary is system-level. |

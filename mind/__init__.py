@@ -15,7 +15,7 @@ import os
 
 from .agent import Mind
 
-__all__ = ["think", "Mind", "get_mind"]
+__all__ = ["think", "think_stream", "Mind", "get_mind"]
 
 
 def _load_secrets() -> None:
@@ -51,3 +51,8 @@ def get_mind() -> Mind:
 def think(text: str) -> str:
     """Send text to the shared Mind and return its reply."""
     return get_mind().think(text)
+
+
+def think_stream(text: str):
+    """Yield the shared Mind's reply incrementally."""
+    yield from get_mind().stream(text)

@@ -25,10 +25,12 @@ langgraph==0.6.7
 langchain-openai==0.3.33
 
 # --- Text-to-speech engine (effectors.effector_voice module) ---
-# Kokoro is a small, fast, local, free TTS model run through onnxruntime
-# (no PyTorch). It synthesizes several times faster than real time on CPU,
-# leaving the GPU free for sense_ear and mind. soundfile writes the WAV files.
-kokoro-onnx==0.5.0
+# Qwen3-TTS VoiceDesign supports natural-language voice descriptions, so the
+# effector can keep its text -> audio contract while using a custom voice.
+# Pin numba away from old Python<3.10 builds that can be selected through the
+# loose librosa dependency in qwen-tts.
+qwen-tts==0.1.1
+numba>=0.61
 soundfile==0.14.0
 
 # --- Demo UI ---

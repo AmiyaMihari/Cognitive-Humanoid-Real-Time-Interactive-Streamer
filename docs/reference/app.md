@@ -12,7 +12,7 @@ aloud** by `effectors.effector_voice`. The full path is
 The app is intentionally thin: it contains **no speech, LLM or TTS logic**. All
 transcription happens inside `sense_ear`, all thinking inside `mind`, and all
 speech synthesis inside `effector_voice`, so the UI never imports Whisper,
-OpenAI or Kokoro directly.
+OpenAI or Qwen3-TTS directly.
 
 ## Run it
 
@@ -24,13 +24,13 @@ streamlit run app.py
 
 | Element | Behaviour |
 | --- | --- |
-| **Model load** | `load_transcriber()` and `load_voice()` build the speech and TTS models once and keep them warm across reruns/sessions via `@st.cache_resource`. The first run downloads `large-v3` (~3 GB) and the Kokoro voice (~340 MB) and caches them. |
+| **Model load** | `load_transcriber()` and `load_voice()` build the speech and TTS models once and keep them warm across reruns/sessions via `@st.cache_resource`. The first run downloads `large-v3` (~3 GB) and the Qwen3-TTS VoiceDesign weights and caches them. |
 | **Layout** | A single minimal screen: the conversation thread, then one input row — `st.chat_input` and the mic icon placed side by side via `st.columns([12, 1])`, ChatGPT-style. No title, sidebar, or saved chats. |
 | **Chat history** | Stored in `st.session_state.messages` and re-rendered with `st.chat_message`. This is the current session only — nothing is persisted. |
 | **🎙️ Microphone** | `streamlit_mic_recorder.mic_recorder` records in the browser and returns a **WAV** clip when you stop. The bytes are passed to `transcriber.transcribe(...)` to get text. |
 | **Text box** | `st.chat_input` captures typed messages directly. |
 | **Reply** | Whether the text came from the mic or the keyboard, it is sent to [`mind.think(...)`](mind/README.md), and the returned reply is appended to the chat as the assistant. |
-| **🔊 Voice** | Every reply is also synthesized with [`effector_voice.speak(...)`](effectors/effector_voice/README.md). The newest reply **autoplays once**; each assistant message keeps an `st.audio` player so it can be replayed. TTS is best-effort: if it fails, the text reply still stands. |
+| **🔊 Voice** | Replies stream as text from `mind`; as soon as a speakable phrase is complete, the app sends that phrase to Qwen3-TTS and adds an autoplaying `st.audio` chunk. Each assistant message keeps the generated audio chunks so they can be replayed. TTS is best-effort: if one chunk fails, the text reply still stands. |
 
 > The demo is a working end-to-end loop: hear/read → think → reply → speak. The
 > speech, thinking and TTS logic all live in their modules; this file only

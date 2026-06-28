@@ -54,8 +54,8 @@ expanded independently below.
 ```
    ┌─────────────────────────┐         ┌────────────────────────┐
    │  synthesizer.py: Voice  │  uses   │  _models.py            │
-   │  Kokoro TTS on CPU via  │ ◄────── │  downloads & caches    │
-   │  onnxruntime (no torch) │         │  the Kokoro model files│
+   │  Qwen3-TTS VoiceDesign  │ ◄────── │  model defaults &      │
+   │  via qwen_tts/PyTorch   │         │  cache configuration   │
    └─────────────────────────┘         └────────────────────────┘
 ```
 
@@ -80,8 +80,8 @@ C.H.R.I.S./
 │   ├── __init__.py
 │   └── effector_voice/     # speaking: text-to-speech
 │       ├── __init__.py     # public API: speak(), get_voice(), Voice
-│       ├── synthesizer.py  # the engine (Kokoro TTS via onnxruntime)
-│       └── _models.py      # internal: Kokoro model-file download & caching
+│       ├── synthesizer.py  # the engine (Qwen3-TTS VoiceDesign wrapper)
+│       └── _models.py      # internal: Qwen3-TTS defaults & cache config
 ├── mind/                   # thinking: text-to-reply
 │   ├── __init__.py         # public API: think(), get_mind(), Mind
 │   └── agent.py            # the engine (LangGraph graph over ChatOpenAI)
@@ -98,7 +98,8 @@ C.H.R.I.S./
 `sense_ear` exposes a tiny contract (`transcribe(audio) -> str`) and hides
 faster-whisper, CTranslate2, CUDA handling and model lifecycle behind it.
 `mind` does the same with `think(text) -> str`, hiding the LLM client and graph.
-`effector_voice` does the same with `speak(text) -> Path`, hiding the Kokoro TTS model.
+`effector_voice` does the same with `speak(text) -> Path`, hiding the Qwen3-TTS
+model and voice-design instruction.
 Benefits: the UI stays trivial, each engine is unit-testable in isolation, and
 new modules (future senses under `senses/`, richer thinking in `mind/`) slot in
 without changing callers.
@@ -126,22 +127,18 @@ for a different one.
 so the chat always *speaks* as well as writes. Its contract mirrors the others —
 `speak(text) -> Path` (a WAV file).
 
-The engine is **Kokoro**, an 82M-parameter TTS model, chosen after comparing the
-local/free options against the project's priorities (low latency, a youthful
-Spanish female voice, no cost):
+The engine is **Qwen3-TTS VoiceDesign**, selected because the voice can be
+described directly in natural language while keeping the same module boundary:
+the rest of the app still sends text and receives a WAV path.
 
-- **Local & free**, Apache-2.0. No API, no per-call cost, works offline.
-- **Low latency.** It runs on **CPU through onnxruntime** (no PyTorch) and
-  synthesizes ~7× faster than real time. Running on CPU is a deliberate choice:
-  it sidesteps the torch/Blackwell GPU stack entirely and leaves the GPU free
-  for `sense_ear` (Whisper) and any GPU work `mind` may add — while latency
-  stays well under a second per reply.
-- **Voice.** The default is `ef_dora`, a youthful Spanish female voice.
-
-Alternatives considered: **Piper** (even lower latency but more robotic), and
-**XTTS-v2** (voice cloning / highest quality, but heavier, higher latency, and a
-PyTorch+GPU dependency). Kokoro was the best fit for "natural enough, very fast,
-fully local."
+- **Custom voice by instruction.** The default voice prompt is: `Speak in an
+  incredulous tone, but with a hint of panic beginning to creep into our voice.
+  Cute anime soft femboy voice.`
+- **Automatic language.** The module sends `language="Auto"` so Qwen3-TTS can
+  adapt to Spanish, English and the other languages it supports.
+- **Local inference.** The model runs through the `qwen-tts` package and caches
+  weights locally through Hugging Face. It prefers CUDA when available, with CPU
+  as a functional fallback.
 
 ### Tuned for short, real-time audio
 
@@ -197,6 +194,6 @@ always win over `.env` values.
 | `faster-whisper` + `ctranslate2` | Whisper inference engine (no PyTorch needed) |
 | `nvidia-cublas-cu12`, `nvidia-cudnn-cu12` | CUDA 12 libs with Blackwell support |
 | `langgraph` + `langchain-openai` | The `mind` thinking engine: a graph over an OpenAI chat model |
-| `kokoro-onnx` + `soundfile` | The `effector_voice` engine: local Kokoro TTS via onnxruntime, and WAV writing |
+| `qwen-tts` + `soundfile` | The `effector_voice` engine: Qwen3-TTS VoiceDesign inference and WAV writing |
 | `python-dotenv` | Loads the `OPENAI_API_KEY` / `HF_TOKEN` secrets from `.env` |
 | `streamlit`, `streamlit-mic-recorder` | Demo UI and in-browser microphone capture |

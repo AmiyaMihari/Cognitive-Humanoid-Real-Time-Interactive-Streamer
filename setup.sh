@@ -93,7 +93,7 @@ cat <<'DONE'
    2. Activate the venv:            source venv/bin/activate
    3. Run the app:                  streamlit run app.py
 
- The first run downloads the speech + voice models (~3.3 GB)
- and caches them; later runs start in seconds.
+ The first run downloads the speech model plus Qwen3-TTS voice
+ weights and caches them; later runs start faster.
 ============================================================
 DONE

@@ -2,41 +2,36 @@
 
 Source: [`effectors/effector_voice/_models.py`](../../../../effectors/effector_voice/_models.py)
 
-> **Internal module.** No stable public API; it only ensures the Kokoro model
-> files are present. Callers use [`effector_voice`](README.md), never this directly.
+> **Internal module.** No stable public API; it only centralizes Qwen3-TTS model
+> defaults and cache configuration. Callers use [`effector_voice`](README.md),
+> never this directly.
 
 ## What it does
 
-The Kokoro acoustic model (`kokoro-v1.0.onnx`, ~310 MB) and voice pack
-(`voices-v1.0.bin`, ~27 MB) are too large to vendor in the repo. This module
-downloads them once to a user cache directory and reuses them thereafter — the
-same approach faster-whisper uses for its weights.
+The Qwen3-TTS VoiceDesign weights are too large to vendor in the repo. The
+`qwen_tts`/Hugging Face loader downloads them lazily on first use and stores
+them in the normal Hugging Face cache, or in `CHRIS_VOICE_CACHE` if set.
 
-The assets are pinned to the **Kokoro v1.0** release (Apache-2.0), so the voice
-never changes underneath the project.
+## Defaults
 
-## Cache location
-
-| | |
+| Setting | Value |
 | --- | --- |
-| Default | `~/.cache/chris/voice/` |
-| Override | set the `CHRIS_VOICE_CACHE` environment variable |
+| Model | `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` |
+| Language | `Auto` |
+| Voice description | `Speak in an incredulous tone, but with a hint of panic beginning to creep into our voice. Cute anime soft femboy voice.` |
 
 ## API (internal)
 
-### `ensure_model_files() -> tuple[Path, Path]`
+### `get_model_id() -> str`
 
-Return `(model_path, voices_path)`, downloading any missing file first.
+Return `CHRIS_VOICE_MODEL` when set, otherwise the default VoiceDesign model id.
 
-- **Idempotent** — existing files are reused; only missing ones are fetched.
-- **Atomic** — each file downloads to a `.part` temp file and is renamed into
-  place only once complete, so an interrupted download never leaves a corrupt
-  model behind.
-- **Return order** matches `kokoro_onnx.Kokoro(model, voices)`.
+### `get_cache_dir() -> Path | None`
 
-Called by `Voice.engine` on first model load.
+Return `CHRIS_VOICE_CACHE` as a `Path` when set. Returning `None` lets Hugging
+Face use its standard cache directory.
 
 ## Related pages
 
-- [synthesizer.md](synthesizer.md) — uses these files to build the engine.
-- [README.md](README.md) — the module's public API.
+- [synthesizer.md](synthesizer.md) - uses these defaults to build the engine.
+- [README.md](README.md) - the module's public API.
