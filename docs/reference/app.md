@@ -22,8 +22,9 @@ streamlit run app.py
 | Element | Behaviour |
 | --- | --- |
 | **Model load** | `load_transcriber()` builds the transcriber once and keeps it warm across reruns/sessions via `@st.cache_resource`. The first run downloads `large-v3` (~3 GB) and caches it. |
-| **Chat history** | Stored in `st.session_state.messages` and re-rendered with `st.chat_message`. |
-| **🔴 Microphone** | `streamlit_mic_recorder.mic_recorder` records in the browser and returns a **WAV** clip when you stop. The bytes are passed to `transcriber.transcribe(...)` to get text. |
+| **Layout** | A single minimal screen: the conversation thread, then one input row — `st.chat_input` and the mic icon placed side by side via `st.columns([12, 1])`, ChatGPT-style. No title, sidebar, or saved chats. |
+| **Chat history** | Stored in `st.session_state.messages` and re-rendered with `st.chat_message`. This is the current session only — nothing is persisted. |
+| **🎙️ Microphone** | `streamlit_mic_recorder.mic_recorder` records in the browser and returns a **WAV** clip when you stop. The bytes are passed to `transcriber.transcribe(...)` to get text. |
 | **Text box** | `st.chat_input` captures typed messages directly. |
 | **Reply** | Whether the text came from the mic or the keyboard, it is sent to [`mind.think(...)`](mind/README.md), and the returned reply is appended to the chat as the assistant. |
 

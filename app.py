@@ -1,9 +1,8 @@
-"""Minimal ChatGPT-style demo for the sense_ear module.
+"""Minimal ChatGPT-style chat UI.
 
-Two inputs only: type a message, or hold the microphone and speak. Spoken
-audio is sent to ``sense_ear`` and the recognised text appears in the chat
-right away. The app is intentionally thin -- all the speech logic lives in the
-isolated ``sense_ear`` module, so this file never touches Whisper directly.
+One thin screen: the conversation, plus a single input row at the bottom — a
+text box with a microphone icon on its right. Type or speak; `sense_ear`
+transcribes speech and `mind` replies. Nothing is persisted between sessions.
 
 Run with:  streamlit run app.py
 """
@@ -16,27 +15,48 @@ from streamlit_mic_recorder import mic_recorder
 from mind import think
 from senses.sense_ear import get_transcriber
 
-st.set_page_config(page_title="sense_ear", page_icon="🎙️")
+st.set_page_config(page_title="C.H.R.I.S.", page_icon="🎙️")
 
 
 @st.cache_resource(show_spinner="Loading the speech model (first run only)...")
 def load_transcriber():
     """Build the transcriber once and keep it warm across reruns/sessions."""
     transcriber = get_transcriber()
-    transcriber.model  # force the (slow) model load to happen here
+    # Force the (slow) model load to happen here. Assigned to a throwaway so
+    # Streamlit's "magic" doesn't render the WhisperModel object to the page.
+    _ = transcriber.model
     return transcriber
 
 
-def main() -> None:
-    st.title("🎙️ sense_ear")
-    st.caption("Type a message, or tap the mic and speak — your words appear as text.")
+# CSS that pins the input row to the bottom of the screen (ChatGPT-style) and
+# keeps the last messages from hiding behind it. `.st-key-input_bar` is the class
+# Streamlit gives the `st.container(key="input_bar")` below.
+_PINNED_INPUT_CSS = """
+<style>
+.st-key-input_bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    max-width: 46rem;
+    padding: 0.5rem 1rem 0.75rem;
+    background-color: var(--background-color, #ffffff);
+    z-index: 100;
+}
+[data-testid="stMainBlockContainer"] { padding-bottom: 6rem; }
+</style>
+"""
 
+
+def main() -> None:
     transcriber = load_transcriber()
+    st.markdown(_PINNED_INPUT_CSS, unsafe_allow_html=True)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Render the conversation so far.
+    # Render the conversation so far (this session only; nothing is saved).
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -49,24 +69,31 @@ def main() -> None:
         st.session_state.messages.append({"role": "assistant", "content": answer})
         st.rerun()
 
-    # --- Microphone input -------------------------------------------------
-    # Records in the browser and returns the clip when the user stops.
-    audio = mic_recorder(
-        start_prompt="🔴 Start recording",
-        stop_prompt="⏹️ Stop recording",
-        just_once=True,
-        format="wav",
-        key="mic",
-    )
+    # Input row: a text box with the mic icon to its right (ChatGPT-style),
+    # pinned to the bottom of the screen via the CSS above.
+    with st.container(key="input_bar"):
+        text_col, mic_col = st.columns([12, 1], vertical_alignment="bottom")
 
+        with text_col:
+            typed = st.chat_input("Message")
+
+        with mic_col:
+            audio = mic_recorder(
+                start_prompt="🎙️",
+                stop_prompt="⏹️",
+                just_once=True,
+                format="wav",
+                key="mic",
+            )
+
+    # Speech path: transcribe, then reply. Silence is simply ignored.
     if audio and audio.get("bytes"):
         with st.spinner("Transcribing..."):
             text = transcriber.transcribe(audio["bytes"])
         if text:
             reply_to(text)
 
-    # --- Text input -------------------------------------------------------
-    typed = st.chat_input("Write a message...")
+    # Text path.
     if typed:
         reply_to(typed)
 
