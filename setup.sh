@@ -55,13 +55,30 @@ if [ ! -f .env ]; then
   echo "==> Created .env from template (.env.example)."
 fi
 
-# 6. (Optional) Install the fish auto-activation hook, if fish is in use.
+# 6. (Optional) Install the venv auto-activation hook for the shells in use, so
+#    the venv activates by itself when you cd into the project. Both are
+#    idempotent and only ever added once.
+repo="$(pwd)"
+
+# fish: drop a conf.d snippet (fish loads it automatically).
 if command -v fish >/dev/null 2>&1; then
   hook="$HOME/.config/fish/conf.d/auto_venv.fish"
   if [ -f scripts/auto_venv.fish ] && [ ! -f "$hook" ]; then
     mkdir -p "$(dirname "$hook")"
     cp scripts/auto_venv.fish "$hook"
-    echo "==> Installed fish auto-venv hook (activates the venv on cd into the project)."
+    echo "==> Installed fish auto-venv hook."
+  fi
+fi
+
+# bash: source the bash hook from ~/.bashrc.
+if [ -f "$HOME/.bashrc" ] && [ -f scripts/auto_venv.sh ]; then
+  if ! grep -q "C.H.R.I.S. venv auto-activation" "$HOME/.bashrc"; then
+    {
+      echo ""
+      echo "# C.H.R.I.S. venv auto-activation (installed by setup.sh)"
+      echo "[ -f \"$repo/scripts/auto_venv.sh\" ] && source \"$repo/scripts/auto_venv.sh\""
+    } >> "$HOME/.bashrc"
+    echo "==> Added bash auto-venv hook to ~/.bashrc."
   fi
 fi
 

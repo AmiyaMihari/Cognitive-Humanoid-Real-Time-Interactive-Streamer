@@ -37,7 +37,7 @@ commands yourself.
 
 ## 1. Install Python 3.12 and the virtual environment
 
-```fish
+```bash
 # Install uv (no sudo; lands in ~/.local/bin)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -46,13 +46,14 @@ uv python install 3.12
 uv venv --python 3.12 venv
 ```
 
-On Linux with fish, `setup.sh` also installs a hook that auto-activates this
-`venv` whenever you `cd` into the project, and deactivates it when you leave.
+On Linux, `setup.sh` also installs a hook (for **bash** via `~/.bashrc`, and for
+**fish** via `conf.d`) that auto-activates this `venv` whenever you `cd` into the
+project, and deactivates it when you leave.
 
 ## 2. Install dependencies
 
-```fish
-source venv/bin/activate        # automatic in fish; explicit here for clarity
+```bash
+source venv/bin/activate        # automatic via the auto-venv hook; explicit here for clarity
 uv pip install -r requirements.txt
 ```
 
@@ -60,7 +61,7 @@ uv pip install -r requirements.txt
 
 Secrets live in a git-ignored `.env` file. Create it from the template:
 
-```fish
+```bash
 cp .env.example .env
 ```
 
@@ -83,7 +84,7 @@ keys never reach the repository. See
 
 ## 4. Run the demo app
 
-```fish
+```bash
 streamlit run app.py
 ```
 

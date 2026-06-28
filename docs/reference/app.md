@@ -16,7 +16,7 @@ OpenAI or Kokoro directly.
 
 ## Run it
 
-```fish
+```bash
 streamlit run app.py
 ```
 

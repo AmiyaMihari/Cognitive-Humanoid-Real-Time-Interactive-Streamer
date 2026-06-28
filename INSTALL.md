@@ -73,9 +73,10 @@ streamlit run app.py
 La primera ejecución descarga los modelos de voz (≈3.3 GB) y los guarda en caché;
 las siguientes arrancan en segundos.
 
-> En Linux con la shell **fish**, el script instala un hook que **activa el
-> entorno automáticamente** al entrar a la carpeta del proyecto, así que puedes
-> saltarte el paso de `source venv/bin/activate`.
+> En Linux, el script instala un hook que **activa el entorno automáticamente**
+> al entrar a la carpeta del proyecto (para **bash** vía `~/.bashrc` y para
+> **fish** vía `conf.d`), así que puedes saltarte el paso de
+> `source venv/bin/activate`.
 
 ## Actualizar tras cambios (`git pull`)
 
