@@ -272,5 +272,9 @@ Decisiones
 GitHub: [AmiyaMihari](https://github.com/AmiyaMihari)  
 ¿Quieres colaborar? ¡Contáctame por GitHub!
 
+## Documentación
+La documentación técnica del proyecto (arquitectura, guía de inicio y referencia
+de los módulos, como `senses/sense_ear`) está en la carpeta [`docs/`](docs/README.md).
+
 ## Licencia
 Open Source.
