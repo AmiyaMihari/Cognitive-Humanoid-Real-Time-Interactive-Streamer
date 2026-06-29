@@ -54,10 +54,21 @@ expanded independently below.
 ```
    ┌─────────────────────────┐         ┌────────────────────────┐
    │  synthesizer.py: Voice  │  uses   │  _models.py            │
-   │  Qwen3-TTS VoiceDesign  │ ◄────── │  model defaults &      │
-   │  via qwen_tts/PyTorch   │         │  cache configuration   │
-   └─────────────────────────┘         └────────────────────────┘
+   │  Qwen3-TTS Base, clones │ ◄────── │  model defaults, paths │
+   │  via qwen_tts/PyTorch   │         │  & cache configuration │
+   └───────┬─────────────────┘         └────────────────────────┘
+           │ uses                  reads
+           ▼                         ▼
+   ┌─────────────────────────┐  ┌────────────────────────────────┐
+   │  streaming.py           │  │  identity/  (baked clips)      │
+   │  sentence split +       │  │  manifest.json + <emotion>/    │
+   │  pipelined synthesis    │  │  reference.wav  ◄── bake_voice │
+   └─────────────────────────┘  └────────────────────────────────┘
 ```
+
+The reference clips in `identity/` are produced offline by
+[`scripts/bake_voice.py`](reference/scripts/bake_voice.md) with the VoiceDesign
+model; the runtime reads `manifest.json` and clones them with the Base model.
 
 The golden rule: **each module hides its implementation behind a tiny
 contract.** `sense_ear` exposes only `audio in → text out`; `mind` exposes only
@@ -79,12 +90,16 @@ C.H.R.I.S./
 ├── effectors/              # action modules, one sub-package per effector
 │   ├── __init__.py
 │   └── effector_voice/     # speaking: text-to-speech
-│       ├── __init__.py     # public API: speak(), get_voice(), Voice
-│       ├── synthesizer.py  # the engine (Qwen3-TTS VoiceDesign wrapper)
-│       └── _models.py      # internal: Qwen3-TTS defaults & cache config
+│       ├── __init__.py     # public API: speak(), get_voice(), warmup(), Voice, *_stream
+│       ├── synthesizer.py  # the engine (Qwen3-TTS Base clone wrapper)
+│       ├── streaming.py    # sentence split + pipelined synthesis
+│       ├── _models.py      # internal: Qwen3-TTS defaults, paths & cache config
+│       └── identity/       # baked voice clips + manifest.json (design-once → clone)
 ├── mind/                   # thinking: text-to-reply
 │   ├── __init__.py         # public API: think(), get_mind(), Mind
 │   └── agent.py            # the engine (LangGraph graph over ChatOpenAI)
+├── scripts/
+│   └── bake_voice.py       # offline CLI: bake the identity/ reference clips
 ├── requirements.txt        # pinned, tested dependency versions
 ├── .env.example            # template for the HF_TOKEN and OPENAI_API_KEY secrets
 ├── txt_interviews.ipynb    # original notebook sense_ear was derived from
@@ -127,14 +142,26 @@ for a different one.
 so the chat always *speaks* as well as writes. Its contract mirrors the others —
 `speak(text) -> Path` (a WAV file).
 
-The engine is **Qwen3-TTS VoiceDesign**, selected because the voice can be
-described directly in natural language while keeping the same module boundary:
-the rest of the app still sends text and receives a WAV path.
+The engine is **Qwen3-TTS**, used in a **design-once -> clone** pattern that
+keeps the same module boundary: the rest of the app still sends text and receives
+a WAV path.
 
-- **Custom voice by instruction.** The default voice prompt is intentionally
-  short and acoustic: cute soft anime femboy timbre, native Latin American
-  Spanish pronunciation, medium pace, controlled volume, calm conversational
-  delivery, and dry tsundere wit without shouting.
+- **Why design-once -> clone.** The old code called `generate_voice_design`
+  (VoiceDesign model) on *every* synthesis, rebuilding the voice from a text
+  description each time, so the identity drifted 10-20% between generations.
+  Instead, the identity is now frozen **once** into a reference clip
+  ([`scripts/bake_voice.py`](reference/scripts/bake_voice.md)), and the runtime
+  only **clones** that clip with the Base model — which is stable across calls.
+  Two models, two jobs: VoiceDesign for baking (offline), Base for cloning
+  (runtime).
+- **Custom voice by instruction (at bake time).** The persona prompt is short and
+  acoustic: cute soft anime femboy timbre, native Latin American Spanish
+  pronunciation, medium pace, controlled volume, calm delivery, dry tsundere wit
+  without shouting. It is the `instruct` used when baking the `neutral` clip.
+- **Emotion bank, frozen per clip.** The Base clone model ignores emotion
+  `instruct`, so emotion is baked into each reference clip. `neutral` ships first;
+  `happy`, `sad`, `angry`, `fear`, `shame` are slots that fall back to `neutral`
+  until baked. `manifest.json` is the source of truth.
 - **Stable Spanish pronunciation.** The module sends `language="Spanish"` by
   default to avoid accidental English-like pronunciation in mixed Spanish text.
   Set `CHRIS_VOICE_LANGUAGE=Auto` to restore automatic language detection.
@@ -142,25 +169,39 @@ the rest of the app still sends text and receives a WAV path.
   weights locally through Hugging Face. It prefers CUDA when available, with CPU
   as a functional fallback.
 
+#### Latency: warm-up, model size and streaming
+
+- **Warm-up.** `Voice.warmup()` builds the engine, all baked clone prompts, and
+  runs one dummy synthesis at boot, so the first real sentence does not pay the
+  kernel-compile cost. `app.py` calls it when `CHRIS_VOICE_WARMUP=1`.
+- **Model size.** The runtime clone model is independent of the bake model, so
+  you can clone the same clip with a smaller, faster Base model. The 0.6B Base
+  (`CHRIS_VOICE_MODEL=Qwen/Qwen3-TTS-12Hz-0.6B-Base`) cuts per-sentence latency
+  to ~1-2.5 s.
+- **flash-attention 2** is requested by default with a safe fallback: if
+  `flash-attn` is missing or fails to load (delicate on Blackwell), the module
+  warns and uses the default attention implementation instead of crashing.
+- **Sentence streaming exists but the app does not use it.** `streaming.py`
+  provides `speak_stream`/`synthesize_stream` (split into sentences, synthesize
+  one ahead in a worker thread) for non-Streamlit callers. The Streamlit app
+  plays **one full WAV** per reply because its rerun model spawned overlapping
+  players; with the 0.6B model, single-WAV playback is fast enough. See
+  [app.md](reference/app.md#background-audio-playback) for how playback avoids the
+  overlap.
+
 #### Qwen3-TTS operational notes
 
-The current app streams **text** from `mind`, but it synthesizes **one full WAV**
-per assistant answer. Earlier phrase-by-phrase synthesis reduced perceived
-latency, but Qwen3-TTS VoiceDesign reinterpreted the voice instruction on each
-chunk, causing different voices across paragraphs and overlapping autoplay in
-Streamlit. A single synthesis call keeps the voice coherent for the full reply.
-
 Qwen3-TTS loads lazily by default: opening Streamlit does not immediately put the
-1.7B TTS model in VRAM. This avoids CUDA out-of-memory errors when Whisper and
-Qwen are accidentally loaded by multiple Streamlit/Python processes. Set
-`CHRIS_VOICE_WARMUP=1` to load Qwen3-TTS at app startup instead, trading higher
+TTS model in VRAM. This avoids CUDA out-of-memory errors when Whisper and Qwen
+are accidentally loaded by multiple Streamlit/Python processes. Set
+`CHRIS_VOICE_WARMUP=1` to warm it up at app startup instead, trading higher
 startup VRAM for a faster first spoken reply.
 
-The local PyTorch cu130/Blackwell stack hit a
-`CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH` during Qwen3-TTS audio decoding, so
-the voice module disables cuDNN for Qwen by default
-(`CHRIS_VOICE_DISABLE_CUDNN=1`). CUDA is still used; only cuDNN-backed kernels
-are avoided for this module. The generated audio length is capped by
+cuDNN is **enabled by default** (`CHRIS_VOICE_DISABLE_CUDNN=0`). On the local
+PyTorch/Blackwell stack, however, Qwen3-TTS audio decoding fails with
+`CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH`, so this machine sets
+`CHRIS_VOICE_DISABLE_CUDNN=1` in its `.env`. CUDA is still used; only
+cuDNN-backed kernels are avoided. The generated audio length is capped by
 `CHRIS_VOICE_MAX_NEW_TOKENS` (`2048` by default): raise it for very long spoken
 answers, or lower it if VRAM becomes tight.
 
@@ -218,6 +259,7 @@ always win over `.env` values.
 | `faster-whisper` + `ctranslate2` | Whisper inference engine (no PyTorch needed) |
 | `nvidia-cublas-cu12`, `nvidia-cudnn-cu12` | CUDA 12 libs with Blackwell support |
 | `langgraph` + `langchain-openai` | The `mind` thinking engine: a graph over an OpenAI chat model |
-| `qwen-tts` + `soundfile` | The `effector_voice` engine: Qwen3-TTS VoiceDesign inference and WAV writing |
+| `qwen-tts` + `soundfile` + `numpy` | The `effector_voice` engine: Qwen3-TTS Base (clone) and VoiceDesign (bake) inference, plus WAV writing |
+| `flash-attn` *(optional)* | Faster attention for `effector_voice`; the module falls back gracefully if it is absent |
 | `python-dotenv` | Loads the `OPENAI_API_KEY` / `HF_TOKEN` secrets from `.env` |
 | `streamlit`, `streamlit-mic-recorder` | Demo UI and in-browser microphone capture |

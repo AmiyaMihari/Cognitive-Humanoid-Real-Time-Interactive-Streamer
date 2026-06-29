@@ -30,11 +30,39 @@ streamlit run app.py
 | **🎙️ Microphone** | `streamlit_mic_recorder.mic_recorder` records in the browser and returns a **WAV** clip when you stop. The bytes are passed to `transcriber.transcribe(...)` to get text. |
 | **Text box** | `st.chat_input` captures typed messages directly. |
 | **Reply** | Whether the text came from the mic or the keyboard, it is sent to [`mind.think(...)`](mind/README.md), and the returned reply is appended to the chat as the assistant. |
-| **🔊 Voice** | Replies stream as text from `mind`; once the full answer is available, the app sends the whole answer to Qwen3-TTS once and autoplays the resulting WAV. This is deliberate: phrase-by-phrase VoiceDesign synthesis can produce different timbres per paragraph and overlapping browser autoplay. TTS is best-effort: if it fails, the text reply still stands. |
+| **🔊 Voice** | Replies stream as text from `mind`; once the full answer is available, the app clones it to one WAV with `effector_voice` and plays it **in the background — no visible player control**. Playback uses a single shared `<audio>` element kept on `window.top` (see [Background audio playback](#background-audio-playback)), so replies never overlap. TTS is best-effort: if it fails, the text reply still stands. |
 
 > The demo is a working end-to-end loop: hear/read → think → reply → speak. The
 > speech, thinking and TTS logic all live in their modules; this file only
 > orchestrates.
+
+## Background audio playback
+
+The reply audio plays with **no visible player control** and must never overlap
+a previous reply. Streamlit makes this surprisingly tricky: it reruns the script
+on every interaction and renders each `st.components.v1.html` snippet in its own
+nested iframe, so naive per-clip players either race against each other or play
+on top of one another.
+
+The robust solution `app.py` uses (`_audio_html`):
+
+- **One shared `<audio>` element** is created once on `window.top` and **reused**
+  for every reply. A single audio element can only play one source at a time, so
+  overlap is physically impossible — the previous reply is paused before the new
+  `src` is set.
+- **`window.top`, not `window.parent`** — every component iframe shares the one
+  top window, so they all reach the same element. `window.parent` differs per
+  clip and was the cause of clips playing at once.
+- **A per-reply id guard** (`window.top.__chrisLastId`) stops the same clip from
+  being triggered twice if Streamlit re-evaluates the snippet on a rerun.
+- The clip is embedded as a base64 `data:audio/wav` URI, so no extra media route
+  is needed; the audio element is detached from the DOM, so nothing is shown.
+
+> Note: the module also offers sentence-level streaming
+> ([`speak_stream`](effectors/effector_voice/streaming.md)) for lower latency,
+> but it is **not** used by the Streamlit app: its rerun model spawned
+> overlapping players. Streaming is intended for non-Streamlit callers. With the
+> faster 0.6B Base model, single-WAV playback is fast enough here.
 
 ## Dependencies used here
 

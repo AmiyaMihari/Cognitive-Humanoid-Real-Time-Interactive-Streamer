@@ -2,19 +2,20 @@
 
 Source: [`effectors/effector_voice/synthesizer.py`](../../../../effectors/effector_voice/synthesizer.py)
 
-The engine behind the module: a thin wrapper around Qwen3-TTS VoiceDesign. Text
-in -> spoken-audio file out.
+The engine behind the module: a thin wrapper around Qwen3-TTS. Text in ->
+spoken-audio file out. At runtime it **clones** a baked reference clip with the
+Base model (design-once -> clone); it never re-designs the voice per call.
 
 ## class `Voice`
 
-Turns text into spoken-audio files using Qwen3-TTS.
+Turns text into spoken-audio files by cloning a baked voice identity.
 
 ### Constructor
 
 ```python
 Voice(
-    voice: str = DEFAULT_VOICE_DESCRIPTION,
     lang: str = "Spanish",
+    emotion: str = "neutral",
     speed: float = 1.0,
     output_dir: str | Path | None = None,
     model: str | None = None,
@@ -26,25 +27,33 @@ Voice(
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `voice` | project voice description | Natural-language vocal direction sent to `generate_voice_design`. Keep it focused on sound, accent, energy, pace and delivery. |
-| `lang` | `"Spanish"` | Language sent to Qwen3-TTS. `Spanish` keeps the accent more stable for Spanish replies; set `CHRIS_VOICE_LANGUAGE=Auto` to restore automatic language detection. |
-| `speed` | `1.0` | Optional post-generation time stretch. `>1.0` is faster, `<1.0` slower. |
+| `lang` | `"Spanish"` | Language sent to Qwen3-TTS. `Spanish` keeps the accent stable; set `CHRIS_VOICE_LANGUAGE=Auto` to restore automatic detection. |
+| `emotion` | `"neutral"` | Default emotion to clone. One of `neutral`, `happy`, `sad`, `angry`, `fear`, `shame`. Unbaked emotions fall back to `neutral`. |
+| `speed` | `1.0` | Optional post-generation time stretch. `>1.0` faster, `<1.0` slower (needs `librosa`). |
 | `output_dir` | `None` | Directory for generated WAVs. Defaults to `<tempdir>/chris_voice`. |
-| `model` | `None` | Hugging Face model id or local path. Defaults to `CHRIS_VOICE_MODEL` or `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign`. |
-| `device` | `None` | Device map. Defaults to `CHRIS_VOICE_DEVICE`, then `cuda:0` if CUDA is available, otherwise `cpu`. |
-| `dtype` | `None` | `auto`, `bfloat16`, `float16` or `float32`. Defaults to `CHRIS_VOICE_DTYPE` or `auto`. |
-| `attn_implementation` | `None` | Optional Transformers attention implementation. |
+| `model` | `None` | Runtime (clone/Base) model id or local path. Defaults to `CHRIS_VOICE_MODEL` or `Qwen/Qwen3-TTS-12Hz-1.7B-Base`. |
+| `device` | `None` | Device map. Defaults to `CHRIS_VOICE_DEVICE`, then `cuda:0` if available, otherwise `cpu`. |
+| `dtype` | `None` | `auto`, `bfloat16`, `float16` or `float32`. Defaults to `CHRIS_VOICE_DTYPE` or `auto` (bf16 on CUDA). |
+| `attn_implementation` | `None` | Attention implementation. Defaults to `CHRIS_VOICE_ATTN`, then `flash_attention_2` with a safe fallback. |
 
-`CHRIS_VOICE_MAX_NEW_TOKENS` defaults to `2048`. Lower values generate faster
-but can cut long answers; higher values may need more VRAM.
-
-By default the loader sets `torch.backends.cudnn.enabled = False` for the
-Qwen3-TTS process path. On the local PyTorch cu130/Blackwell stack, Qwen3-TTS
-audio decoding otherwise fails with `CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH`.
-Set `CHRIS_VOICE_DISABLE_CUDNN=0` to try cuDNN again after upgrading PyTorch or
-the CUDA/cuDNN wheels.
+`CHRIS_VOICE_MAX_NEW_TOKENS` defaults to `2048`. Lower values generate faster but
+can cut long answers; higher values may need more VRAM.
 
 > The constructor is cheap: the model is **not** loaded until first use (lazy).
+
+#### flash-attention 2 fallback
+
+The loader requests `attn_implementation="flash_attention_2"` by default. If
+`flash-attn` is not installed or fails to load (it is delicate on Blackwell), the
+build emits a `RuntimeWarning` and retries with the default attention
+implementation instead of crashing.
+
+#### cuDNN
+
+cuDNN is **enabled by default**. Set `CHRIS_VOICE_DISABLE_CUDNN=1` to disable it.
+On the local PyTorch/Blackwell stack, Qwen3-TTS audio decoding otherwise fails
+with `CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH`, so this box must run with cuDNN
+disabled. CUDA itself is still used; only cuDNN-backed kernels are avoided.
 
 ### Properties
 
@@ -54,30 +63,60 @@ the CUDA/cuDNN wheels.
 
 ### Methods
 
-#### `synthesize(text: str) -> tuple[numpy.ndarray, int]`
+#### `warmup() -> None`
 
-Synthesize `text` and return `(samples, sample_rate)` in memory. Use this when
-you want the raw audio (for example to stream); most callers want `speak`.
+Build the engine, construct a clone prompt for **every baked emotion**, and run
+one short dummy synthesis to compile CUDA kernels. Doing this at boot makes the
+first real sentence fast. Idempotent. Raises a clear error if `neutral` is not
+baked.
 
-#### `speak(text: str, path: str | Path | None = None) -> Path`
+#### `synthesize(text: str, emotion: str | None = None) -> tuple[numpy.ndarray, int]`
 
-Synthesize `text` to a WAV file and return its path.
+Clone `text` and return `(samples, sample_rate)` in memory. `emotion` falls back
+to `neutral` (warning once) when not baked. Use this for raw audio; most callers
+want `speak`.
 
-- **`text`** - the text to speak (for example, `mind`'s reply).
+#### `speak(text: str, emotion: str | None = None, path: str | Path | None = None) -> Path`
+
+Clone `text` to a WAV file and return its path.
+
+- **`text`** - the text to speak.
+- **`emotion`** - optional emotion; defaults to the instance's `emotion`.
 - **`path`** - optional destination. If omitted, a uniquely named file is written
   under `output_dir`.
 - **Returns** - `pathlib.Path` to the written WAV.
 
+#### `synthesize_stream(text, emotion=None, prefetch=1) -> Iterator[tuple[np.ndarray, int]]`
+
+Yield `(samples, sample_rate)` per sentence, in order, while the next sentence is
+synthesized one step ahead in a worker thread. See [streaming.md](streaming.md).
+
+#### `speak_stream(text, emotion=None, prefetch=1) -> Iterator[Path]`
+
+Like `synthesize_stream`, but writes each sentence to a WAV and yields its
+`Path`.
+
 #### `clear_cuda_cache() -> None`
 
-Release temporary PyTorch CUDA allocations after synthesis. This does not unload
-the model weights; it only asks PyTorch to return cached temporary buffers.
+Release temporary PyTorch CUDA allocations after synthesis. Does not unload the
+weights.
 
 #### `unload() -> None`
 
-Drop the Qwen3-TTS engine from memory and clear CUDA cache. `app.py` uses this
-before microphone transcription so Whisper and Qwen3-TTS are not held in VRAM at
-the same time.
+Drop the Qwen3-TTS engine and cached clone prompts from memory and clear the CUDA
+cache. `app.py` uses this before microphone transcription so Whisper and
+Qwen3-TTS are not held in VRAM at the same time.
+
+### Internal / maintainers only
+
+- `_load_identity()` reads the [manifest](baking-the-voice.md#the-manifest) and
+  builds one `create_voice_clone_prompt(...)` per baked emotion, caching them in
+  `self._prompts`. It fails loud and early if `neutral` is missing, pointing at
+  the bake script.
+- `_resolve_prompt(emotion)` returns the cached prompt, falling back to `neutral`
+  with a one-time warning.
+- `_build_engine(...)` implements the flash-attn fallback described above.
+- `_env_flag(name, default)` parses boolean environment variables.
 
 ## Examples
 
@@ -85,17 +124,20 @@ the same time.
 from effectors.effector_voice import Voice
 
 v = Voice()
+v.warmup()                          # optional: prime kernels at boot
 path = v.speak("¡Hola! ¿Cómo te va?")
 
 # Raw audio instead of a file
 samples, sr = v.synthesize("Texto de prueba")
 
-# A different voice-design instruction
-dramatic = Voice(voice="Speak softly, nervously, and very close to tears.")
-dramatic.speak("No puede ser...")
+# A different default emotion (falls back to neutral until baked)
+sad = Voice(emotion="sad")
+sad.speak("No tengo ganas de nada hoy...")
 ```
 
 ## Related pages
 
 - [README.md](README.md) - the module's public API.
-- [models.md](models.md) - model/cache configuration used by `engine`.
+- [baking-the-voice.md](baking-the-voice.md) - how the reference clips are made.
+- [streaming.md](streaming.md) - the sentence-streaming helpers.
+- [models.md](models.md) - model/cache/identity configuration used by `engine`.

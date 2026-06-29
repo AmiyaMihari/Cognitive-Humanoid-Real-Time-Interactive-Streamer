@@ -11,7 +11,11 @@ reference/
 │   └── effector_voice/
 │       ├── README.md            ← effectors/effector_voice/__init__.py  (PUBLIC API)
 │       ├── synthesizer.md       ← effectors/effector_voice/synthesizer.py
-│       └── models.md            ← effectors/effector_voice/_models.py
+│       ├── streaming.md         ← effectors/effector_voice/streaming.py
+│       ├── models.md            ← effectors/effector_voice/_models.py
+│       └── baking-the-voice.md  ← how-to guide (not a source file)
+├── scripts/
+│   └── bake_voice.md            ← scripts/bake_voice.py
 ├── mind/
 │   ├── README.md                ← mind/__init__.py  (PUBLIC API)
 │   └── agent.md                 ← mind/agent.py
@@ -31,8 +35,13 @@ reference/
     text-to-speech module**: send it text, get back a spoken audio file.
   - [effectors/effector_voice/synthesizer.md](effectors/effector_voice/synthesizer.md)
     — the `Voice` class in detail.
+  - [effectors/effector_voice/streaming.md](effectors/effector_voice/streaming.md)
+    — sentence-level streaming helpers.
   - [effectors/effector_voice/models.md](effectors/effector_voice/models.md) —
-    internal Qwen3-TTS defaults and cache configuration.
+    internal Qwen3-TTS defaults, identity-bank paths and cache configuration.
+  - [effectors/effector_voice/baking-the-voice.md](effectors/effector_voice/baking-the-voice.md)
+    — **how-to**: bake or change Chris's voice and emotion bank.
+- [scripts/bake_voice.md](scripts/bake_voice.md) — the voice baking CLI.
 - [mind/](mind/README.md) — **the thinking module**: send it text, get a reply.
   - [mind/agent.md](mind/agent.md) — the `Mind` class and its LangGraph graph.
 - [senses/](senses/README.md) — the perception package.

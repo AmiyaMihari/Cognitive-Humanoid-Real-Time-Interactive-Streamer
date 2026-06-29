@@ -25,13 +25,21 @@ langgraph==0.6.7
 langchain-openai==0.3.33
 
 # --- Text-to-speech engine (effectors.effector_voice module) ---
-# Qwen3-TTS VoiceDesign supports natural-language voice descriptions, so the
-# effector can keep its text -> audio contract while using a custom voice.
+# The voice uses a design-once -> clone pattern: VoiceDesign bakes a reference
+# clip once (scripts/bake_voice.py), and the Base model clones it at runtime.
+# qwen-tts pulls in numpy/librosa; the effector's sentence streaming uses only
+# the standard library (queue/threading/re), so it adds no new dependency.
 # Pin numba away from old Python<3.10 builds that can be selected through the
 # loose librosa dependency in qwen-tts.
 qwen-tts==0.1.1
 numba>=0.61
 soundfile==0.14.0
+
+# Optional: flash-attention 2 makes Qwen3-TTS faster. The effector requests it
+# by default and falls back gracefully if it is absent, so this is NOT required.
+# It is delicate to build on Blackwell GPUs, hence left commented out. To try it:
+#   uv pip install flash-attn --no-build-isolation
+# flash-attn
 
 # --- Demo UI ---
 streamlit==1.58.0

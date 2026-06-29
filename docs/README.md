@@ -34,7 +34,11 @@ project                         docs/reference
 │   └── effector_voice/ ─────►  │   └── effector_voice/
 │       ├── __init__.py ─────►  │       ├── README.md   (public API)
 │       ├── synthesizer.py ──►  │       ├── synthesizer.md
-│       └── _models.py  ─────►  │       └── models.md
+│       ├── streaming.py ────►  │       ├── streaming.md
+│       └── _models.py  ─────►  │       ├── models.md
+│                              │       └── baking-the-voice.md  (how-to)
+├── scripts/          ───────►  ├── scripts/
+│   └── bake_voice.py ───────►  │   └── bake_voice.md
 ├── mind/             ───────►  ├── mind/
 │   ├── __init__.py ─────────►  │   ├── README.md   (public API)
 │   └── agent.py    ─────────►  │   └── agent.md
