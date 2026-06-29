@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "emotions": {
+    "neutral": {
+      "reference": "neutral/reference.wav",
+      "ref_text": "Ah, ya volviste. No, no estaba esperándote ni nada de eso... simplemente no tenía nada mejor que hacer. En fin, ¿en qué andas? Cuéntame, que para algo encendí todo esto.",
+      "instruct": "Cute, soft anime femboy voice; youthful, gentle, and clear. Native Latin American Spanish pronunciation with no English or Spanglish accent. Calm, conversational delivery at a medium pace and controlled volume. Dry, cynical, carefree tsundere wit; lightly sharp-tongued and intellectual, but not angry. No swearing, no shouting, and avoid dramatic rising intonation at sentence endings.",
+      "language": "Spanish",
+      "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "created_at": "2026-06-29T06:50:39.598590+00:00",
+      "sha256": "6b5e06397ecf0d44c7f28494739c794d6a405e6529557d8d8aef2ad80c1d24f9"
+    }
+  }
+}

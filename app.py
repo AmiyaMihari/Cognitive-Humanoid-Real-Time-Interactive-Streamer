@@ -35,7 +35,7 @@ def load_voice():
     """Return the shared TTS voice without loading Qwen until speech is needed."""
     voice = get_voice()
     if _env_flag("CHRIS_VOICE_WARMUP", default=False):
-        _ = voice.engine
+        voice.warmup()
     return voice
 
 
